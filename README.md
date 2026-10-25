@@ -27,3 +27,9 @@ uv run python tools/build_race_3d.py --fit <race.fit> --osm <overpass_dumps_dir>
 ```
 
 `--osm` 目錄需有 `buildings.json`、`water.json`、`green.json`、`roads.json` 四個 Overpass JSON（查詢條件見 `tools/build_race_3d.py` 的 `OSM_QUERIES`）。不加 `--standalone` 時輸出的是給 claude.ai Artifact 用的頁面片段。
+
+## 授權
+
+- 程式碼（`tools/` 與 `index.html` 的頁面程式）：MIT，見 [LICENSE](LICENSE)。
+- 內嵌的 OpenStreetMap 資料：ODbL 1.0。
+- 作者本人的比賽紀錄（軌跡、心率、步頻、步幅、海拔、時間）：僅供瀏覽，保留所有權利，不在 MIT 授權範圍內。

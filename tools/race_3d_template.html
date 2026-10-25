@@ -147,6 +147,13 @@ td .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; mar
   .stage { grid-template-columns: minmax(0, 1fr); }
   .mapwrap { height: 58vh; min-height: 320px; }
   .detail { grid-template-columns: minmax(0, 1fr); }
+  /* phone order: map, player, chart, live numbers, settings */
+  #view-replay { display: flex; flex-direction: column; gap: 12px; }
+  #view-replay .stage { display: contents; }
+  .mapwrap { order: 1; }
+  .player { order: 2; margin: 0; }
+  .chartbox { order: 3; }
+  .panel { order: 4; }
   .panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
 }
 @media (max-width: 480px) {
@@ -347,6 +354,8 @@ const D = "__RACE_DATA__";
   const map = new maplibregl.Map({
     container: 'map', maxPitch: 78, pitch: 58, bearing: -18, center: [121.545, 25.058], zoom: 13,
     attributionControl: { compact: true, customAttribution: '© OpenStreetMap contributors' },
+    cooperativeGestures: window.matchMedia('(pointer: coarse)').matches,
+    locale: { 'CooperativeGesturesHandler.MobileHelpText': '用兩指移動地圖', 'CooperativeGesturesHandler.WindowsHelpText': '按住 Ctrl 並捲動以縮放地圖', 'CooperativeGesturesHandler.MacHelpText': '按住 ⌘ 並捲動以縮放地圖' },
     style: { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#111a2b' } }] },
   });
   map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
@@ -536,7 +545,6 @@ const D = "__RACE_DATA__";
       if (r.band) { cx.fillStyle = 'rgba(184,196,255,.16)'; cx.fillRect(L, Y(r.band[0]), W - L - R, Y(r.band[1]) - Y(r.band[0]) || 1); }
       cx.strokeStyle = line; cx.lineWidth = 1; cx.fillStyle = muted; cx.textAlign = 'right';
       r.ticks.forEach(v => { const y = Y(v); cx.beginPath(); cx.moveTo(L, y + .5); cx.lineTo(W - R, y + .5); cx.stroke(); cx.fillText(r.f(v), L - 6, y); });
-      cx.save(); cx.textAlign = 'left'; cx.fillStyle = col('--fg'); cx.fillText(r.label, L + 6, top + 9); cx.restore();
       // series
       cx.lineWidth = 1.4; cx.lineJoin = 'round';
       const val = r.key === 'pace' ? (i) => paceAt(i) : r.key === 'step' ? (i) => P.step[i] / 10 : (i) => P[r.key][i];
@@ -547,12 +555,18 @@ const D = "__RACE_DATA__";
         for (let i = iStart; i <= iEnd; i++) { const x = X(P.ckm[i]), y = Y(val(i)); i === iStart ? cx.moveTo(x, y) : cx.lineTo(x, y); }
         cx.stroke();
       }
+      // row label on a plate so the series never runs through it
+      cx.save(); cx.textAlign = 'left';
+      const lw = cx.measureText(r.label).width;
+      cx.fillStyle = 'rgba(24,34,58,.88)'; cx.fillRect(L + 2, top + 1, lw + 10, 16);
+      cx.fillStyle = col('--fg'); cx.fillText(r.label, L + 7, top + 9); cx.restore();
     });
     // x axis, checkpoints, stops, cursors
     const bottom = H - B;
     cx.fillStyle = muted; cx.textAlign = 'center';
-    for (let k = 0; k <= 21; k++) { if (k % (W < 520 ? 5 : 2) === 0 || k === 21) cx.fillText(k + '', X(k), bottom + 11); }
-    cx.textAlign = 'left'; cx.fillText('km', W - R - 14, bottom + 11);
+    const step = W < 520 ? 5 : 2, gapKm = W < 520 ? 2 : 1;
+    for (let k = 0; k <= 21; k++) { if (k === 21 || (k % step === 0 && 21 - k >= gapKm)) cx.fillText(k + '', X(k), bottom + 11); }
+    cx.textAlign = 'right'; cx.fillText('km', L - 6, bottom + 11);
     T.checks.slice(0, 2).forEach(c => { cx.strokeStyle = col('--good'); cx.setLineDash([2, 3]); cx.beginPath(); cx.moveTo(X(c.km) + .5, 0); cx.lineTo(X(c.km) + .5, bottom); cx.stroke(); cx.setLineDash([]); });
     if (on.stop) T.stops.forEach(s => { cx.fillStyle = col('--warn'); cx.beginPath(); cx.arc(X(s.ckm), rh - 6, 3, 0, 7); cx.fill(); });
     if (state.t >= MAT) {
