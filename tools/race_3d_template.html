@@ -499,7 +499,7 @@ const D = "__RACE_DATA__";
     else html = `<div class="bar" style="background:linear-gradient(90deg,${SEQ.map(c => hex(c)).join(',')})"></div><div class="ticks"><span>${m.lo} ${m.unit}</span><span>${m.hi} ${m.unit}</span></div>`;
     $('legend').innerHTML = html;
   }
-  const TOG = [['bld', '3D 建築', '#5a6890'], ['lm', '地標', '#e7d7b8'], ['br', '橋樑', '#9fd3ff'], ['aid', '補給／醫護', '#6fc3ff'], ['km', '公里牌', '#e7eaf3'], ['stop', '走路停頓', '#ffca28'], ['fx', '上下橋特效', '#ffc94d']];
+  const TOG = [['bld', '3D 建築', '#5a6890'], ['lm', '地標', '#e7d7b8'], ['br', '橋樑', '#9fd3ff'], ['aid', '補給／醫護', '#6fc3ff'], ['km', '公里牌', '#e7eaf3'], ['stop', '走路停頓', '#ffca28'], ['fx', '上下橋', '#ffc94d']];
   const on = Object.fromEntries(TOG.map(t => [t[0], true]));
   $('toggles').innerHTML = TOG.map(([k, l, c]) => `<button type="button" class="chip" aria-pressed="true" data-k="${k}"><i style="background:${c}"></i>${l}</button>`).join('');
   $('toggles').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; on[b.dataset.k] = !on[b.dataset.k]; b.setAttribute('aria-pressed', on[b.dataset.k]); applyToggles(); };
