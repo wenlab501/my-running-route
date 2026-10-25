@@ -19,7 +19,6 @@
   --fg: #e7eaf3;
   --muted: #8f99b6;
   --accent: #ff8a3d;      /* sunrise: you */
-  --plan: #b8c4ff;        /* comparisons with the pre-race plan (detail tab) */
   --good: #7fd1ae;
   --up: #ffc94d;          /* climbing onto a bridge */
   --down: #57c7ff;        /* coming down */
@@ -102,7 +101,6 @@ button:hover, select:hover { border-color: #3b4a72; }
 .seg { background: var(--panel-2); border-radius: 8px; padding: 8px 10px; }
 .seg span { font-size: 12px; color: var(--muted); display: block; }
 .seg b { font-family: var(--font-display); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.seg em { font-style: normal; font-size: 12px; color: var(--plan); display: block; }
 .tablewrap { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
 th, td { padding: 5px 8px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
@@ -256,7 +254,7 @@ td .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; mar
     <p class="hint">公里依大會計時點校正；點任一列會切到 3D 瀏覽並移到該公里。</p>
     <div class="tablewrap">
       <table>
-        <thead><tr><th>公里</th><th>配速</th><th>心率</th><th>步幅</th><th>步頻</th><th>累計（晶片）</th><th>對計畫</th></tr></thead>
+        <thead><tr><th>公里</th><th>配速</th><th>心率</th><th>步幅</th><th>步頻</th><th>累計（晶片）</th></tr></thead>
         <tbody id="splits"></tbody>
       </table>
     </div>
@@ -685,13 +683,12 @@ const D = "__RACE_DATA__";
   const segDefs = [[0, 9.7], [9.7, 17.1], [17.1, T.official_km]];
   const chipAt = (km) => km === 0 ? 0 : T.checks.find(c => c.km === km).chip;
   $('segs').innerHTML = segDefs.map(([a, b]) => {
-    const dt = chipAt(b) - chipAt(a), pace = dt / (b - a), ahead = b * PLAN - chipAt(b);
-    return `<div class="seg"><span>${b === T.official_km ? `${a} km–終點` : `${a}–${b} km`}（晶片）</span><b>${fmtP(pace)}</b><em>到此領先計畫 ${fmtT(ahead).replace(/^0:/, '')}</em></div>`;
+    const dt = chipAt(b) - chipAt(a), pace = dt / (b - a);
+    return `<div class="seg"><span>${b === T.official_km ? `${a} km–終點` : `${a}–${b} km`}（晶片）</span><b>${fmtP(pace)}</b></div>`;
   }).join('');
   $('splits').innerHTML = T.splits.map((s, k) => {
     const c = (() => { const f = (PLAN - s.pace) / 95; return f >= 0 ? ramp(DIV_FAST, f) : ramp(DIV_SLOW, -f); })();
-    const ahead = s.km * PLAN - s.chip;
-    return `<tr data-k="${k}"><td>${s.km === T.official_km ? '終點' : s.km}</td><td><span class="sw" style="background:${c}"></span>${fmtP(s.pace)}</td><td>${s.hr}</td><td>${(s.step / 10).toFixed(0)}</td><td>${s.cad}</td><td>${fmtT(s.chip)}</td><td>${ahead >= 0 ? '+' : '−'}${fmtT(Math.abs(ahead)).replace(/^0:/, '')}</td></tr>`;
+    return `<tr data-k="${k}"><td>${s.km === T.official_km ? '終點' : s.km}</td><td><span class="sw" style="background:${c}"></span>${fmtP(s.pace)}</td><td>${s.hr}</td><td>${(s.step / 10).toFixed(0)}</td><td>${s.cad}</td><td>${fmtT(s.chip)}</td></tr>`;
   }).join('');
   $('splits').onclick = (e) => {
     const tr = e.target.closest('tr'); if (!tr) return;
