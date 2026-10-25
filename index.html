@@ -368,7 +368,7 @@ const D = {"race":{"name":"長榮馬拉松 半馬","name_en":"EVA AIR Marathon 2
   const evAt = (t) => EV.find(e => t >= e.t0 && t <= e.t1);
   const evLine = (e) => { const c = []; for (let k = idxAtT(e.t0); k <= idxAtT(e.t1); k++) c.push([P.lon[k], P.lat[k]]); return c; };
   const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const state = { h: 'hr', c: 'pace', t: END_RUN, playing: false, speed: 60, follow: false, bearing: -18, pitch: 60, zoom: 15.7 };
+  const state = { h: 'hr', c: 'pace', t: MAT, touched: false, playing: false, speed: 60, follow: false, bearing: -18, pitch: 60, zoom: 15.7 };
 
   // ---------- header facts ----------
   const iStart = idxAtT(MAT), iEnd = idxAtT(END_RUN);
@@ -516,8 +516,8 @@ const D = {"race":{"name":"長榮馬拉松 半馬","name_en":"EVA AIR Marathon 2
   $('speeds').innerHTML = SPEEDS.map(s => `<button type="button" data-s="${s}" aria-pressed="${s === state.speed}">${s}×</button>`).join('');
   $('speeds').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; state.speed = +b.dataset.s; [...$('speeds').children].forEach(x => x.setAttribute('aria-pressed', x === b)); };
   const scrub = $('scrub'); scrub.min = MAT - 30; scrub.max = END; scrub.step = 1; scrub.value = state.t;
-  scrub.oninput = () => { state.t = +scrub.value; render(true); };
-  $('play').onclick = () => { if (!state.playing && state.t >= END - 1) state.t = MAT - 10; setPlaying(!state.playing); };
+  scrub.oninput = () => { state.touched = true; state.t = +scrub.value; render(true); };
+  $('play').onclick = () => { if (!state.playing && state.t >= END - 1) state.t = MAT - 10; state.touched = true; setPlaying(!state.playing); };
   function setPlaying(p) { state.playing = p; $('play').textContent = p ? '❚❚ 暫停' : '▶ 播放'; if (p) { last = performance.now(); requestAnimationFrame(tick); } }
   function setFollow(f) { state.follow = f; $('follow').setAttribute('aria-pressed', f); if (f) render(true); }
   $('follow').onclick = () => setFollow(!state.follow);
@@ -580,7 +580,7 @@ const D = {"race":{"name":"長榮馬拉松 半馬","name_en":"EVA AIR Marathon 2
     showEvent(ev, t);
     frame++;
     if (map.getLayer('wall') && (force || frame % 6 === 0)) {
-      const grown = t < END_RUN ? ['<=', ['get', 'i'], i] : null;
+      const grown = state.touched && t < END_RUN ? ['<=', ['get', 'i'], i] : null;
       if (JSON.stringify(grown) !== wallFilter) { wallFilter = JSON.stringify(grown); map.setFilter('wall', grown); }
     }
     if (map.getSource('prog') && (force || frame % 3 === 0)) {
@@ -604,7 +604,7 @@ const D = {"race":{"name":"長榮馬拉松 半馬","name_en":"EVA AIR Marathon 2
     $('lv-km').textContent = `${Math.max(0, finished ? T.official_km : ck).toFixed(2)} km`;
     const walking = started && !finished && P.spd[i] < 1.7;
     const st = $('lv-status');
-    st.textContent = !started ? '起跑前' : finished ? '完賽' : walking ? '走路／停頓' : '跑步中';
+    st.textContent = !started ? '起跑前' : finished ? '完賽' : !state.touched ? '起點' : walking ? '走路／停頓' : '跑步中';
     st.className = 'status' + (finished ? ' done' : walking ? ' walk' : '');
     $('lv-pace').textContent = started && !finished ? fmtP(paceAt(i)) : finished ? fmtP(D.race.chip / T.official_km) : '–';
     $('lv-hr').textContent = started ? Math.round(P.hr[i]) : '–';
@@ -673,7 +673,7 @@ const D = {"race":{"name":"長榮馬拉松 半馬","name_en":"EVA AIR Marathon 2
   function seekFromChart(ev) {
     const rect = cv.getBoundingClientRect(), L = 58, R = 10, x = ev.clientX - rect.left;
     const km = clamp((x - L) / (rect.width - L - R), 0, 1) * T.official_km;
-    state.t = P.t[idxAtKm(km)]; render(true);
+    state.touched = true; state.t = P.t[idxAtKm(km)]; render(true);
   }
   let dragging = false;
   cv.addEventListener('pointerdown', (e) => { dragging = true; cv.setPointerCapture(e.pointerId); seekFromChart(e); });
@@ -696,7 +696,7 @@ const D = {"race":{"name":"長榮馬拉松 半馬","name_en":"EVA AIR Marathon 2
     const tr = e.target.closest('tr'); if (!tr) return;
     showTab('replay');
     const s = T.splits[+tr.dataset.k], prevKm = +tr.dataset.k ? T.splits[+tr.dataset.k - 1].km : 0;
-    state.t = MAT + (+tr.dataset.k ? T.splits[+tr.dataset.k - 1].chip : 0); render(true);
+    state.touched = true; state.t = MAT + (+tr.dataset.k ? T.splits[+tr.dataset.k - 1].chip : 0); render(true);
     const a = posAtKm(prevKm), b = posAtKm(s.km);
     if (!state.follow) map.fitBounds([[Math.min(a[0], b[0]), Math.min(a[1], b[1])], [Math.max(a[0], b[0]), Math.max(a[1], b[1])]], { padding: 120, pitch: 60, bearing: map.getBearing(), maxZoom: 16, duration: 900 });
   };
@@ -711,7 +711,7 @@ const D = {"race":{"name":"長榮馬拉松 半馬","name_en":"EVA AIR Marathon 2
   $('stops').onclick = (e) => {
     const tr = e.target.closest('tr'); if (!tr) return;
     showTab('replay'); setFollow(false);
-    state.t = +tr.dataset.t; render(true);
+    state.touched = true; state.t = +tr.dataset.t; render(true);
     map.flyTo({ center: posAtT(state.t), zoom: 16.3, pitch: 60, duration: 900 });
   };
 
@@ -725,7 +725,7 @@ const D = {"race":{"name":"長榮馬拉松 半馬","name_en":"EVA AIR Marathon 2
   $('evrows').onclick = (e) => {
     const tr = e.target.closest('tr'); if (!tr) return;
     const ev = EV[+tr.dataset.k];
-    showTab('replay'); state.t = Math.max(MAT, ev.t0 - 25); setFollow(true); render(true); setPlaying(true);
+    showTab('replay'); state.touched = true; state.t = Math.max(MAT, ev.t0 - 25); setFollow(true); render(true); setPlaying(true);
   };
 
   // ---------- tabs ----------
