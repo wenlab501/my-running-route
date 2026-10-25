@@ -1,0 +1,12 @@
+[project]
+name = "my-running-route"
+version = "0.1.0"
+description = "3D route page for the 2026 EVA AIR Marathon half (2026-10-25), built from a Garmin FIT file and OpenStreetMap data"
+requires-python = ">=3.12"
+dependencies = [
+    "fitparse==1.2.0",
+    "pandas==3.0.6",
+]
+
+[tool.uv]
+package = false

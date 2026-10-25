@@ -1,0 +1,625 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>2026 長榮半馬 3D 路徑</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+/*__MAPLIBRE_CSS__*/
+</style>
+<style>
+/* Layout: one race-day console. Map + live panel on top, synced charts and splits underneath.
+   Single committed look: the pre-dawn start (05:26), navy ground with a sunrise accent. */
+:root {
+  --bg: #0b1120;
+  --panel: #121a2c;
+  --panel-2: #18223a;
+  --line: #26314d;
+  --fg: #e7eaf3;
+  --muted: #8f99b6;
+  --accent: #ff8a3d;      /* sunrise: you */
+  --ghost: #b8c4ff;       /* plan pace twin */
+  --good: #7fd1ae;
+  --warn: #ffca28;
+  --font-display: "Barlow Condensed", "Arial Narrow", "Noto Sans TC", sans-serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  color-scheme: dark;
+}
+html, body { height: auto; }
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 14px 28px; margin: 0;
+}
+.num { font-family: var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+header.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 10px 24px; margin-bottom: 12px; }
+.eyebrow { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .14em; font-size: 13px; color: var(--muted); }
+h1 { margin: 2px 0 0; font-size: clamp(24px, 4vw, 34px); font-weight: 700; text-wrap: balance; line-height: 1.15; }
+h1 .num { color: var(--accent); font-size: 1.12em; margin-left: .25em; }
+.facts { display: flex; flex-wrap: wrap; gap: 6px 22px; }
+.fact { display: flex; flex-direction: column; }
+.fact b { font-family: var(--font-display); font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.fact span { font-size: 12px; color: var(--muted); }
+.fact.plan b { color: var(--ghost); }
+
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 12px; }
+.mapwrap { position: relative; min-width: 0; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: #0f1728; height: min(68vh, 720px); min-height: 380px; }
+#map { position: absolute; inset: 0; }
+.panel { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.card h2 { margin: 0 0 8px; font-family: var(--font-display); font-weight: 600; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+
+.live .clock { font-family: var(--font-display); font-size: 44px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.live .km { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.live .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; margin-top: 10px; }
+.live .grid div { display: flex; flex-direction: column; }
+.live .grid b { font-family: var(--font-display); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.live .grid span { font-size: 12px; color: var(--muted); }
+.gap { margin-top: 10px; padding: 8px 10px; border-radius: 8px; background: var(--panel-2); font-size: 13px; display: flex; gap: 8px; align-items: baseline; }
+.gap b { font-family: var(--font-display); font-size: 20px; color: var(--ghost); font-variant-numeric: tabular-nums; }
+.status { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 99px; font-size: 12px; background: var(--panel-2); color: var(--muted); vertical-align: middle; }
+.status.walk { background: rgba(255, 202, 40, .16); color: var(--warn); }
+.status.done { background: rgba(127, 209, 174, .16); color: var(--good); }
+
+.ctl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 10px; align-items: center; }
+.ctl label { color: var(--muted); font-size: 13px; }
+select, button { font: inherit; color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 7px; padding: 6px 9px; }
+button { cursor: pointer; }
+button:hover, select:hover { border-color: #3b4a72; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.legend { margin-top: 10px; }
+.legend .bar { height: 10px; border-radius: 5px; }
+.legend .ticks { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 3px; font-variant-numeric: tabular-nums; }
+.legend .zones { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--muted); }
+.legend .zones i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+.legend .note { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.toggles { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 99px; border: 1px solid var(--line); background: transparent; font-size: 13px; color: var(--muted); }
+.chip[aria-pressed="true"] { background: var(--panel-2); color: var(--fg); border-color: #3b4a72; }
+.chip i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+.player { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; margin: 12px 0 8px; }
+.player .play { min-width: 92px; background: var(--accent); color: #1a0f05; border-color: var(--accent); font-weight: 700; }
+.player input[type=range] { flex: 1 1 260px; min-width: 0; accent-color: var(--accent); }
+.player .speeds { display: flex; gap: 4px; }
+.player .speeds button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.player .t { font-family: var(--font-display); font-size: 18px; font-variant-numeric: tabular-nums; min-width: 128px; text-align: right; color: var(--muted); }
+.chartbox { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 6px 4px; }
+#chart { width: 100%; height: 300px; display: block; cursor: crosshair; touch-action: pan-y; }
+
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
+.tabs button { background: transparent; border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 8px 14px 9px; margin-bottom: -1px; color: var(--muted); font-size: 15px; font-weight: 500; }
+.tabs button:hover { color: var(--fg); }
+.tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+.detail { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 12px; }
+.detail .side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.detail .hint { font-size: 12.5px; color: var(--muted); margin: 0 0 8px; }
+.detail .tablewrap { max-height: none; }
+.segs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+.seg { background: var(--panel-2); border-radius: 8px; padding: 8px 10px; }
+.seg span { font-size: 12px; color: var(--muted); display: block; }
+.seg b { font-family: var(--font-display); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.seg em { font-style: normal; font-size: 12px; color: var(--ghost); display: block; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { padding: 5px 8px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
+th { position: sticky; top: 0; background: var(--panel); color: var(--muted); font-weight: 500; font-size: 12px; }
+td:first-child, th:first-child { text-align: left; }
+tbody tr { cursor: pointer; }
+tbody tr:hover td { background: var(--panel-2); }
+tbody tr.cur td { background: rgba(255, 138, 61, .12); }
+td .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+.notes { font-size: 12.5px; color: var(--muted); }
+.notes p { margin: 0 0 8px; max-width: 65ch; }
+.notes ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+
+/* map markers */
+.mk { pointer-events: auto; font-size: 12px; line-height: 1.2; white-space: nowrap; }
+.mk-lm { display: flex; align-items: center; gap: 5px; }
+.mk-lm .dot { width: 8px; height: 8px; border-radius: 50%; background: #e7d7b8; box-shadow: 0 0 0 2px rgba(11,17,32,.85); flex: none; }
+.mk-lm.bridge .dot { background: #9fd3ff; border-radius: 2px; transform: rotate(45deg); }
+.mk-lm .tx { color: #f1e6d0; text-shadow: 0 1px 2px #000, 0 0 6px rgba(0,0,0,.8); font-weight: 500; }
+.mk-lm.bridge .tx { color: #cfe8ff; }
+#map:not(.zoomed) .mk-lm .tx { display: none; }
+#map:not(.zoomed) .mk-lm:hover .tx { display: inline; }
+.mk-km { font-family: var(--font-display); font-weight: 700; font-size: 12px; color: #0b1120; background: #e7eaf3; border-radius: 4px; padding: 0 4px; box-shadow: 0 1px 3px rgba(0,0,0,.5); }
+.mk-km.chk { background: var(--good); }
+.mk-aid { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #0b1120; background: #6fc3ff; box-shadow: 0 0 0 2px rgba(11,17,32,.85); }
+.mk-aid.med { background: #ff6b6b; color: #fff; }
+.mk-stop { width: 12px; height: 12px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 0 2px rgba(11,17,32,.9); }
+.mk-run { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.mk-run .tag { font-family: var(--font-display); font-weight: 700; font-size: 13px; padding: 0 6px; border-radius: 4px; background: var(--accent); color: #1a0f05; }
+.mk-run .pin { width: 14px; height: 14px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px rgba(255,138,61,.35), 0 0 14px 4px rgba(255,138,61,.55); }
+.mk-run.ghost .tag { background: var(--ghost); color: #10162a; }
+.mk-run.ghost .pin { background: var(--ghost); box-shadow: 0 0 0 3px rgba(184,196,255,.3); }
+.maptools { position: absolute; top: max(10px, env(safe-area-inset-top, 0px)); left: 10px; display: flex; gap: 6px; z-index: 2; }
+.maptools button { background: rgba(18,26,44,.88); backdrop-filter: blur(4px); font-size: 13px; }
+.maptools button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.maplibregl-popup-content { background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; font-size: 13px; padding: 8px 10px; }
+.maplibregl-popup-tip { border-top-color: var(--panel) !important; border-bottom-color: var(--panel) !important; }
+.maplibregl-ctrl-attrib { background: rgba(11,17,32,.7) !important; color: var(--muted); }
+.maplibregl-ctrl-attrib a { color: var(--muted); }
+
+@media (max-width: 900px) {
+  .stage { grid-template-columns: minmax(0, 1fr); }
+  .mapwrap { height: 58vh; min-height: 320px; }
+  .detail { grid-template-columns: minmax(0, 1fr); }
+  .panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+}
+@media (max-width: 480px) {
+  .live .clock { font-size: 36px; }
+  .segs { grid-template-columns: minmax(0, 1fr); }
+  .player .t { min-width: 0; }
+  #chart { height: 260px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<header class="top">
+  <div>
+    <div class="eyebrow">EVA AIR Marathon 2026 · 半程 21.0975 km · 2026-10-25 05:26 起跑</div>
+    <h1>2026 長榮半馬 3D 路徑<span class="num">2:30:23</span></h1>
+  </div>
+  <div class="facts" id="facts"></div>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="檢視">
+  <button type="button" role="tab" id="tab-replay" aria-controls="view-replay" aria-selected="true">3D 瀏覽</button>
+  <button type="button" role="tab" id="tab-detail" aria-controls="view-detail" aria-selected="false">分段明細</button>
+</nav>
+
+<section id="view-replay" role="tabpanel" aria-labelledby="tab-replay">
+<div class="stage">
+  <div class="mapwrap">
+    <div id="map" role="region" aria-label="3D 比賽路徑地圖"></div>
+    <div class="maptools">
+      <button id="follow" aria-pressed="false" type="button">鏡頭跟隨</button>
+      <button id="overview" type="button">全覽</button>
+    </div>
+  </div>
+  <aside class="panel">
+    <section class="card live" aria-live="off">
+      <h2>即時數據</h2>
+      <div class="clock num" id="lv-clock">0:00:00</div>
+      <div class="km"><span id="lv-km">0.00 km</span><span class="status" id="lv-status">起跑前</span></div>
+      <div class="grid">
+        <div><b id="lv-pace">–</b><span>配速 /km</span></div>
+        <div><b id="lv-hr">–</b><span>心率 bpm</span></div>
+        <div><b id="lv-step">–</b><span>步幅 cm</span></div>
+        <div><b id="lv-cad">–</b><span>步頻 spm</span></div>
+      </div>
+      <div class="gap"><span>計畫分身 7:55/km</span><b id="lv-gap">–</b><span id="lv-gapd"></span></div>
+    </section>
+    <section class="card">
+      <h2>3D 呈現</h2>
+      <div class="ctl">
+        <label for="hsel">高度</label>
+        <select id="hsel"></select>
+        <label for="csel">顏色</label>
+        <select id="csel"></select>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div class="toggles" id="toggles"></div>
+    </section>
+  </aside>
+</div>
+
+<div class="player">
+  <button class="play" id="play" type="button">▶ 播放</button>
+  <div class="speeds" id="speeds" role="group" aria-label="播放速度"></div>
+  <input type="range" id="scrub" aria-label="比賽時間軸">
+  <div class="t num" id="tlabel"></div>
+</div>
+<div class="chartbox"><canvas id="chart" aria-label="配速、心率、步幅與海拔隨距離變化"></canvas></div>
+</section>
+
+<section id="view-detail" role="tabpanel" aria-labelledby="tab-detail" hidden>
+<div class="segs" id="segs"></div>
+<div class="detail">
+  <section class="card">
+    <h2>每公里</h2>
+    <p class="hint">公里依大會計時點校正；點任一列會切到 3D 瀏覽並移到該公里。</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>公里</th><th>配速</th><th>心率</th><th>步幅</th><th>步頻</th><th>累計（晶片）</th><th>對計畫</th></tr></thead>
+        <tbody id="splits"></tbody>
+      </table>
+    </div>
+  </section>
+  <div class="side">
+  <section class="card">
+    <h2>走路與停頓</h2>
+    <p class="hint">5 秒均速低於 6 km/h 且持續超過 6 秒的時段。</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>位置</th><th>晶片時間</th><th>時長</th><th>附近標示的補給站</th></tr></thead>
+        <tbody id="stops"></tbody>
+      </table>
+    </div>
+  </section>
+  <section class="card notes">
+    <h2>資料與說明</h2>
+    <p>軌跡、配速、心率、步幅、步頻與海拔來自 Garmin 手錶每秒紀錄（手錶量得 <span id="gpskm"></span> km）。公里數依大會 9.7 km、17.1 km 與終點三個計時點分段校正，讓回放時間與晶片時間一致。</p>
+    <ul>
+      <li>計畫分身以賽前約定的 7:50–8:00/km 取中間值 7:55/km 等速前進，從起跑感應墊同時出發。</li>
+      <li>心率顏色依個人 LTHR 148 的區間：Z2 123–132、穩態 133–140、節奏 141–144、閾值 145–150。</li>
+      <li>步幅、步頻為手腕估計值；海拔為手錶紀錄，起伏多來自橋與堤頂坡道，高度模式放大 8 倍。</li>
+      <li>補給站與醫護站依大會路線圖目測標示，位置是概略值。黃點是手錶偵測到的走路或停頓（5 秒均速低於 6 km/h 且超過 6 秒）。</li>
+      <li>建築、河川、公園、道路、橋樑與地標：© OpenStreetMap contributors（ODbL），資料於 2026-10-25 擷取。</li>
+    </ul>
+  </section>
+  </div>
+</div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.js"></script>
+<script>
+const D = "__RACE_DATA__";
+(() => {
+  const T = D.track, P = T.pts, N = P.t.length, MAT = T.mat, END_RUN = T.chip_end, PLAN = T.plan_s_per_km;
+  const END = Math.max(END_RUN, MAT + Math.ceil(T.official_km * PLAN)) + 4;
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- helpers ----------
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const fmtT = (s) => { s = Math.max(0, Math.round(s)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return `${h}:${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}`; };
+  const fmtP = (s) => { if (!isFinite(s) || s > 1200) return '–'; s = Math.round(s); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+  const paceAt = (i) => 1000 / Math.max(P.spd[i], 0.4);
+  const idxAtT = (t) => clamp(Math.floor(t / 2), 0, N - 1);
+  const lerp = (a, b, f) => a + (b - a) * f;
+  function posAtT(t) {
+    const f = t / 2, i = clamp(Math.floor(f), 0, N - 2), r = clamp(f - i, 0, 1);
+    return [lerp(P.lon[i], P.lon[i + 1], r), lerp(P.lat[i], P.lat[i + 1], r)];
+  }
+  function idxAtKm(km) { let lo = 0, hi = N - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (P.ckm[m] < km) lo = m + 1; else hi = m; } return lo; }
+  function posAtKm(km) {
+    const i = idxAtKm(km); if (i <= 0) return [P.lon[0], P.lat[0]];
+    const a = P.ckm[i - 1], b = P.ckm[i], r = b > a ? clamp((km - a) / (b - a), 0, 1) : 0;
+    return [lerp(P.lon[i - 1], P.lon[i], r), lerp(P.lat[i - 1], P.lat[i], r)];
+  }
+  const ghostKm = (t) => clamp((t - MAT) / PLAN, 0, T.official_km);
+  const hex = (c) => '#' + c.map(v => Math.round(clamp(v, 0, 255)).toString(16).padStart(2, '0')).join('');
+  function ramp(stops, f) {
+    f = clamp(f, 0, 1); const n = stops.length - 1, i = Math.min(n - 1, Math.floor(f * n)), r = f * n - i;
+    return hex(stops[i].map((v, k) => lerp(v, stops[i + 1][k], r)));
+  }
+  const SEQ = [[43, 58, 103], [63, 136, 197], [127, 209, 174], [242, 232, 109]];
+  const DIV_FAST = [[232, 226, 214], [255, 170, 90], [244, 96, 54], [196, 45, 52]];
+  const DIV_SLOW = [[232, 226, 214], [140, 180, 230], [70, 120, 210]];
+  const ZONES = [[0, 123, '#6f7ea6', '恢復 <123'], [123, 133, '#4fb3bf', 'Z2 123–132'], [133, 141, '#9ccc65', '穩態 133–140'], [141, 145, '#ffca28', '節奏 141–144'], [145, 151, '#ff7043', '閾值 145–150'], [151, 999, '#e53935', '>150']];
+
+  // ---------- metrics ----------
+  const M = {
+    hr:   { label: '心率', unit: 'bpm', v: i => P.hr[i], lo: 108, hi: 152 },
+    pace: { label: '配速', unit: '/km', v: i => paceAt(i), lo: 600, hi: 380 },
+    step: { label: '步幅', unit: 'cm', v: i => P.step[i] / 10, lo: 70, hi: 90 },
+    cad:  { label: '步頻', unit: 'spm', v: i => P.cad[i], lo: 160, hi: 182 },
+    alt:  { label: '海拔', unit: 'm', v: i => P.alt[i], lo: 0, hi: 17 },
+  };
+  const norm = (m, v) => clamp((v - m.lo) / (m.hi - m.lo), 0, 1);
+  function colorOf(key, i) {
+    const m = M[key], v = m.v(i);
+    if (key === 'pace') { const f = (PLAN - v) / 95; return f >= 0 ? ramp(DIV_FAST, f) : ramp(DIV_SLOW, -f); }
+    if (key === 'hr') return ZONES.find(z => v >= z[0] && v < z[1])[2];
+    return ramp(SEQ, norm(m, v));
+  }
+  function heightOf(key, i) {
+    if (key === 'alt') return 4 + Math.max(0, P.alt[i]) * 8;
+    return 8 + norm(M[key], M[key].v(i)) * 110;
+  }
+  const state = { h: 'hr', c: 'pace', t: END_RUN, playing: false, speed: 60, follow: false, bearing: -18 };
+
+  // ---------- header facts ----------
+  const iStart = idxAtT(MAT), iEnd = idxAtT(END_RUN);
+  let hrSum = 0; for (let i = iStart; i <= iEnd; i++) hrSum += P.hr[i];
+  const avgHr = Math.round(hrSum / (iEnd - iStart + 1));
+  $('facts').innerHTML = [
+    ['平均配速', fmtP(D.race.chip / T.official_km) + '/km'],
+    ['槍聲時間', fmtT(D.race.gun)],
+    ['平均心率', avgHr + ' bpm'],
+    ['計畫 7:55/km 完賽', fmtT(T.official_km * PLAN), 'plan'],
+  ].map(([k, v, c]) => `<div class="fact ${c || ''}"><b>${v}</b><span>${k}</span></div>`).join('');
+  $('gpskm').textContent = T.gps_km.toFixed(2);
+
+  // ---------- geometry ----------
+  const routeLine = { type: 'Feature', geometry: { type: 'LineString', coordinates: P.lon.slice(iStart, iEnd + 1).map((x, k) => [x, P.lat[iStart + k]]) } };
+  function wallFC() {
+    const feats = [], W = 3.2;
+    for (let i = iStart; i < iEnd; i++) {
+      const x0 = P.lon[i], y0 = P.lat[i], x1 = P.lon[i + 1], y1 = P.lat[i + 1];
+      const dx = (x1 - x0) * 101000, dy = (y1 - y0) * 111000, L = Math.hypot(dx, dy) || 1;
+      const ox = (-dy / L) * W / 101000, oy = (dx / L) * W / 111000;
+      feats.push({ type: 'Feature', properties: { i, h: heightOf(state.h, i), c: colorOf(state.c, i) },
+        geometry: { type: 'Polygon', coordinates: [[[x0 + ox, y0 + oy], [x1 + ox, y1 + oy], [x1 - ox, y1 - oy], [x0 - ox, y0 - oy], [x0 + ox, y0 + oy]]] } });
+    }
+    return { type: 'FeatureCollection', features: feats };
+  }
+  function hexagon([lon, lat], rM, h, c) {
+    const ring = [];
+    for (let k = 0; k <= 6; k++) { const a = Math.PI / 3 * k; ring.push([lon + Math.cos(a) * rM / 101000, lat + Math.sin(a) * rM / 111000]); }
+    return { type: 'Feature', properties: { h, c }, geometry: { type: 'Polygon', coordinates: [ring] } };
+  }
+
+  // ---------- map ----------
+  const map = new maplibregl.Map({
+    container: 'map', maxPitch: 78, pitch: 58, bearing: -18, center: [121.545, 25.058], zoom: 13,
+    attributionControl: { compact: true, customAttribution: '© OpenStreetMap contributors' },
+    style: { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#111a2b' } }] },
+  });
+  map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+  const bounds = routeLine.geometry.coordinates.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(routeLine.geometry.coordinates[0], routeLine.geometry.coordinates[0]));
+  function overview(anim = true) {
+    const cam = map.cameraForBounds(bounds, { padding: { top: 50, bottom: 20, left: 30, right: 30 }, bearing: -18 });
+    const opts = { center: cam.center, zoom: cam.zoom + 0.15, bearing: -18, pitch: 58 };
+    state.bearing = -18;
+    anim ? map.flyTo({ ...opts, duration: 1200 }) : map.jumpTo(opts);
+  }
+
+  map.on('load', () => {
+    ready = true;
+    map.setLight({ anchor: 'viewport', color: '#ffe2c2', intensity: 0.32, position: [1.2, 210, 35] });
+    const O = D.osm;
+    map.addSource('green', { type: 'geojson', data: O.green });
+    map.addSource('water', { type: 'geojson', data: O.water });
+    map.addSource('roads', { type: 'geojson', data: O.roads });
+    map.addSource('bld', { type: 'geojson', data: O.buildings });
+    map.addSource('route', { type: 'geojson', data: routeLine });
+    map.addSource('prog', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
+    map.addSource('wall', { type: 'geojson', data: wallFC() });
+    map.addSource('pillars', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+    map.addLayer({ id: 'green', type: 'fill', source: 'green', paint: { 'fill-color': '#16291f', 'fill-opacity': 0.9 } });
+    map.addLayer({ id: 'water', type: 'fill', source: 'water', filter: ['==', ['geometry-type'], 'Polygon'], paint: { 'fill-color': '#173a55' } });
+    map.addLayer({ id: 'river', type: 'line', source: 'water', filter: ['==', ['geometry-type'], 'LineString'], paint: { 'line-color': '#1d4566', 'line-width': 3 } });
+    map.addLayer({ id: 'roads', type: 'line', source: 'roads', layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': ['match', ['get', 'r'], 1, '#33416a', 2, '#2c3a5e', '#253150'],
+        'line-width': ['interpolate', ['linear'], ['zoom'], 12, ['match', ['get', 'r'], 1, 2.2, 2, 1.6, 0.8], 17, ['match', ['get', 'r'], 1, 14, 2, 10, 6]] } });
+    map.addLayer({ id: 'route', type: 'line', source: 'route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#e9e1d2', 'line-opacity': 0.4, 'line-width': 2 } });
+    map.addLayer({ id: 'prog', type: 'line', source: 'prog', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ff8a3d', 'line-width': 4 } });
+    map.addLayer({ id: 'bld', type: 'fill-extrusion', source: 'bld', paint: { 'fill-extrusion-color': '#2a3554', 'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-opacity': 0.72 } });
+    map.addLayer({ id: 'wall', type: 'fill-extrusion', source: 'wall', paint: { 'fill-extrusion-color': ['get', 'c'], 'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-opacity': 0.88 } });
+    map.addLayer({ id: 'pillars', type: 'fill-extrusion', source: 'pillars', paint: { 'fill-extrusion-color': ['get', 'c'], 'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-opacity': 0.95 } });
+    overview(false);
+    buildMarkers();
+    render(true);
+    map.once('idle', () => map.triggerRepaint());
+  });
+  map.on('zoom', () => $('map').classList.toggle('zoomed', map.getZoom() > 14.1));
+  map.on('dragstart', () => { if (state.follow) setFollow(false); });
+
+  // ---------- markers ----------
+  const groups = { lm: [], br: [], aid: [], km: [], stop: [] };
+  function el(cls, html, title) { const e = document.createElement('div'); e.className = 'mk ' + cls; e.innerHTML = html; if (title) e.title = title; return e; }
+  function addMk(group, e, ll, anchor = 'center', popup) {
+    const m = new maplibregl.Marker({ element: e, anchor }).setLngLat(ll).addTo(map);
+    if (popup) m.setPopup(new maplibregl.Popup({ offset: 12, closeButton: false }).setHTML(popup));
+    groups[group].push(m);
+  }
+  function buildMarkers() {
+    D.landmarks.forEach(l => addMk('lm', el('mk-lm', `<span class="dot"></span><span class="tx">${l.name}</span>`), [l.lon, l.lat], 'left', `<b>${l.name}</b><br>${l.en}`));
+    D.bridges.forEach(b => addMk('br', el('mk-lm bridge', `<span class="dot"></span><span class="tx">${b.name}</span>`), [b.lon, b.lat], 'left', `<b>${b.name}</b><br>${b.en}`));
+    T.aid.forEach(a => {
+      const med = /^醫護/.test(a.label);
+      addMk('aid', el('mk-aid' + (med ? ' med' : ''), med ? '+' : '水'), [a.lon, a.lat], 'center', `<b>${a.label}</b><br>約 ${a.ckm.toFixed(1)} km（依路線圖概略標示）`);
+    });
+    T.kms.forEach(k => { if (k.km <= 21) addMk('km', el('mk-km', k.km + 'K'), [k.lon, k.lat], 'bottom', `<b>${k.km} km</b>`); });
+    T.checks.slice(0, 2).forEach(c => {
+      const ll = posAtKm(c.km);
+      addMk('km', el('mk-km chk', c.km + 'K 計時'), ll, 'bottom', `<b>${c.km} km 計時點</b><br>晶片 ${fmtT(c.chip)}，計畫 ${fmtT(c.plan)}<br>領先計畫 ${fmtT(c.plan - c.chip)}`);
+    });
+    T.stops.forEach(s => addMk('stop', el('mk-stop', ''), [s.lon, s.lat], 'center', `<b>走路／停頓 ${s.dur} 秒</b><br>約 ${s.ckm.toFixed(2)} km，晶片 ${fmtT(s.t - MAT)}`));
+    runMk = new maplibregl.Marker({ element: el('mk-run', '<span class="tag">你</span><span class="pin"></span>'), anchor: 'bottom' }).setLngLat(posAtT(state.t)).addTo(map);
+    ghostMk = new maplibregl.Marker({ element: el('mk-run ghost', '<span class="tag">計畫 7:55</span><span class="pin"></span>'), anchor: 'bottom' }).setLngLat(posAtKm(ghostKm(state.t))).addTo(map);
+    applyToggles();
+  }
+  let runMk, ghostMk, ready = false;
+
+  // ---------- controls ----------
+  for (const [k, m] of Object.entries(M)) { $('hsel').add(new Option(m.label + (k === 'alt' ? '（×8）' : ''), k)); $('csel').add(new Option(m.label, k)); }
+  $('hsel').value = state.h; $('csel').value = state.c;
+  $('hsel').onchange = (e) => { state.h = e.target.value; refreshWall(); };
+  $('csel').onchange = (e) => { state.c = e.target.value; refreshWall(); legend(); drawChart(); };
+  function refreshWall() { if (map.getSource('wall')) map.getSource('wall').setData(wallFC()); render(true); }
+  function legend() {
+    const k = state.c, m = M[k];
+    let html;
+    if (k === 'pace') html = `<div class="bar" style="background:linear-gradient(90deg,${ramp(DIV_SLOW, 1)},${ramp(DIV_SLOW, .5)},${ramp(DIV_FAST, 0)},${ramp(DIV_FAST, .5)},${ramp(DIV_FAST, 1)})"></div>
+      <div class="ticks"><span>9:30 慢</span><span>7:55 計畫</span><span>6:20 快</span></div><div class="note">顏色以賽前計畫配速 7:55/km 為中點。</div>`;
+    else if (k === 'hr') html = `<div class="zones">${ZONES.map(z => `<span><i style="background:${z[2]}"></i>${z[3]}</span>`).join('')}</div><div class="note">個人 LTHR 148 的心率區間。</div>`;
+    else html = `<div class="bar" style="background:linear-gradient(90deg,${SEQ.map(c => hex(c)).join(',')})"></div><div class="ticks"><span>${m.lo} ${m.unit}</span><span>${m.hi} ${m.unit}</span></div>`;
+    $('legend').innerHTML = html;
+  }
+  const TOG = [['bld', '3D 建築', '#5a6890'], ['lm', '地標', '#e7d7b8'], ['br', '橋樑', '#9fd3ff'], ['aid', '補給／醫護', '#6fc3ff'], ['km', '公里牌', '#e7eaf3'], ['stop', '走路停頓', '#ffca28'], ['ghost', '計畫分身', '#b8c4ff']];
+  const on = Object.fromEntries(TOG.map(t => [t[0], true]));
+  $('toggles').innerHTML = TOG.map(([k, l, c]) => `<button type="button" class="chip" aria-pressed="true" data-k="${k}"><i style="background:${c}"></i>${l}</button>`).join('');
+  $('toggles').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; on[b.dataset.k] = !on[b.dataset.k]; b.setAttribute('aria-pressed', on[b.dataset.k]); applyToggles(); };
+  function applyToggles() {
+    for (const g of ['lm', 'br', 'aid', 'km', 'stop']) groups[g].forEach(m => { m.getElement().hidden = !on[g]; });
+    if (map.getLayer('bld')) map.setLayoutProperty('bld', 'visibility', on.bld ? 'visible' : 'none');
+    if (ghostMk) ghostMk.getElement().hidden = !on.ghost;
+    render(true);
+  }
+  const SPEEDS = [30, 60, 120, 300];
+  $('speeds').innerHTML = SPEEDS.map(s => `<button type="button" data-s="${s}" aria-pressed="${s === state.speed}">${s}×</button>`).join('');
+  $('speeds').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; state.speed = +b.dataset.s; [...$('speeds').children].forEach(x => x.setAttribute('aria-pressed', x === b)); };
+  const scrub = $('scrub'); scrub.min = MAT - 30; scrub.max = END; scrub.step = 1; scrub.value = state.t;
+  scrub.oninput = () => { state.t = +scrub.value; render(true); };
+  $('play').onclick = () => { if (!state.playing && state.t >= END - 1) state.t = MAT - 10; setPlaying(!state.playing); };
+  function setPlaying(p) { state.playing = p; $('play').textContent = p ? '❚❚ 暫停' : '▶ 播放'; if (p) { last = performance.now(); requestAnimationFrame(tick); } }
+  function setFollow(f) { state.follow = f; $('follow').setAttribute('aria-pressed', f); if (f) render(true); }
+  $('follow').onclick = () => setFollow(!state.follow);
+  $('overview').onclick = () => { setFollow(false); overview(); };
+
+  // ---------- playback ----------
+  let last = 0, frame = 0, wallFilter = 'null';
+  function tick(now) {
+    if (!state.playing) return;
+    const dt = Math.min(0.5, (now - last) / 1000); last = now;
+    state.t = Math.min(END, state.t + dt * state.speed);
+    render(false);
+    if (state.t >= END) setPlaying(false); else requestAnimationFrame(tick);
+  }
+  function heading(i) {
+    const a = clamp(i - 4, 0, N - 1), b = clamp(i + 6, 0, N - 1);
+    const dx = (P.lon[b] - P.lon[a]) * 101000, dy = (P.lat[b] - P.lat[a]) * 111000;
+    return Math.atan2(dx, dy) * 180 / Math.PI;
+  }
+  function render(force) {
+    const t = state.t, tr = clamp(t, MAT, END_RUN), i = idxAtT(tr), pos = posAtT(tr);
+    const gk = ghostKm(t), gpos = posAtKm(gk);
+    if (runMk) { runMk.setLngLat(pos); ghostMk.setLngLat(gpos); }
+    frame++;
+    if (map.getLayer('wall') && (force || frame % 6 === 0)) {
+      const grown = t < END_RUN ? ['<=', ['get', 'i'], i] : null;
+      if (JSON.stringify(grown) !== wallFilter) { wallFilter = JSON.stringify(grown); map.setFilter('wall', grown); }
+    }
+    if (map.getSource('prog') && (force || frame % 3 === 0)) {
+      const coords = []; for (let k = iStart; k <= i; k++) coords.push([P.lon[k], P.lat[k]]); coords.push(pos);
+      map.getSource('prog').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: coords } });
+      const pill = [hexagon(pos, 6, heightOf(state.h, i) + 22, '#ff8a3d')];
+      if (on.ghost) pill.push(hexagon(gpos, 5, heightOf(state.h, idxAtKm(gk)) + 16, '#b8c4ff'));
+      map.getSource('pillars').setData({ type: 'FeatureCollection', features: pill });
+    }
+    if (state.follow && ready) {
+      let target = heading(i), d = ((target - state.bearing + 540) % 360) - 180;
+      state.bearing += d * (force ? 1 : 0.04);
+      map.jumpTo({ center: pos, bearing: state.bearing, pitch: 60, zoom: 15.7 });
+    }
+    // readout
+    const started = t >= MAT, finished = t >= END_RUN;
+    $('lv-clock').textContent = fmtT(started ? Math.min(t, END_RUN) - MAT : 0);
+    const ck = started ? P.ckm[i] : 0;
+    $('lv-km').textContent = `${Math.max(0, finished ? T.official_km : ck).toFixed(2)} km`;
+    const walking = started && !finished && P.spd[i] < 1.7;
+    const st = $('lv-status');
+    st.textContent = !started ? '起跑前' : finished ? '完賽' : walking ? '走路／停頓' : '跑步中';
+    st.className = 'status' + (finished ? ' done' : walking ? ' walk' : '');
+    $('lv-pace').textContent = started && !finished ? fmtP(paceAt(i)) : finished ? fmtP(D.race.chip / T.official_km) : '–';
+    $('lv-hr').textContent = started ? Math.round(P.hr[i]) : '–';
+    $('lv-step').textContent = started ? (P.step[i] / 10).toFixed(0) : '–';
+    $('lv-cad').textContent = started ? Math.round(P.cad[i]) : '–';
+    if (started) {
+      const myKm = finished ? T.official_km : ck, chipNow = Math.min(t, END_RUN) - MAT;
+      const ahead = myKm * PLAN - chipNow;
+      $('lv-gap').textContent = (ahead >= 0 ? '領先 ' : '落後 ') + fmtT(Math.abs(ahead)).replace(/^0:/, '');
+      $('lv-gapd').textContent = `（距離差 ${Math.abs(myKm - gk).toFixed(2)} km）`;
+    } else { $('lv-gap').textContent = '–'; $('lv-gapd').textContent = ''; }
+    $('tlabel').textContent = started ? `晶片 ${fmtT(t - MAT)}` : `起跑前 ${Math.round(MAT - t)} 秒`;
+    if (+scrub.value !== Math.round(t)) scrub.value = Math.round(t);
+    if (force || frame % 4 === 0) drawChart();
+    markRow(started ? Math.min(21, Math.floor(ck)) : -1);
+  }
+
+  // ---------- chart ----------
+  const cv = $('chart'), cx = cv.getContext('2d');
+  const ROWS = [
+    { key: 'pace', label: '配速 /km', lo: 570, hi: 360, ticks: [420, 480, 540], f: fmtP, band: [470, 480] },
+    { key: 'hr', label: '心率 bpm', lo: 108, hi: 156, ticks: [120, 133, 141, 150], f: v => v },
+    { key: 'step', label: '步幅 cm', lo: 66, hi: 92, ticks: [70, 80, 90], f: v => v },
+    { key: 'alt', label: '海拔 m', lo: 0, hi: 18, ticks: [5, 10, 15], f: v => v },
+  ];
+  const cs = getComputedStyle(document.documentElement);
+  const col = (n) => cs.getPropertyValue(n).trim();
+  function drawChart() {
+    const W = cv.clientWidth, H = cv.clientHeight, dpr = window.devicePixelRatio || 1;
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.clearRect(0, 0, W, H);
+    const L = 58, R = 10, B = 20, gapY = 8, rh = (H - B - gapY * (ROWS.length - 1)) / ROWS.length, KM = T.official_km;
+    const X = (km) => L + (km / KM) * (W - L - R);
+    cx.font = '11px "Noto Sans TC", sans-serif'; cx.textBaseline = 'middle';
+    const muted = col('--muted'), line = col('--line');
+    ROWS.forEach((r, ri) => {
+      const top = ri * (rh + gapY), Y = (v) => top + (1 - clamp((v - r.lo) / (r.hi - r.lo), 0, 1)) * rh;
+      cx.fillStyle = col('--panel-2'); cx.fillRect(L, top, W - L - R, rh);
+      if (r.band) { cx.fillStyle = 'rgba(184,196,255,.16)'; cx.fillRect(L, Y(r.band[0]), W - L - R, Y(r.band[1]) - Y(r.band[0]) || 1); }
+      cx.strokeStyle = line; cx.lineWidth = 1; cx.fillStyle = muted; cx.textAlign = 'right';
+      r.ticks.forEach(v => { const y = Y(v); cx.beginPath(); cx.moveTo(L, y + .5); cx.lineTo(W - R, y + .5); cx.stroke(); cx.fillText(r.f(v), L - 6, y); });
+      cx.save(); cx.textAlign = 'left'; cx.fillStyle = col('--fg'); cx.fillText(r.label, L + 6, top + 9); cx.restore();
+      // series
+      cx.lineWidth = 1.4; cx.lineJoin = 'round';
+      const val = r.key === 'pace' ? (i) => paceAt(i) : r.key === 'step' ? (i) => P.step[i] / 10 : (i) => P[r.key][i];
+      if (r.key === state.c || (r.key === 'pace' && state.c === 'pace')) {
+        for (let i = iStart; i < iEnd; i += 2) { cx.strokeStyle = colorOf(state.c, i); cx.beginPath(); cx.moveTo(X(P.ckm[i]), Y(val(i))); cx.lineTo(X(P.ckm[Math.min(i + 2, iEnd)]), Y(val(Math.min(i + 2, iEnd)))); cx.stroke(); }
+      } else {
+        cx.strokeStyle = r.key === 'alt' ? '#6fa7d6' : '#c9d2ea'; cx.beginPath();
+        for (let i = iStart; i <= iEnd; i++) { const x = X(P.ckm[i]), y = Y(val(i)); i === iStart ? cx.moveTo(x, y) : cx.lineTo(x, y); }
+        cx.stroke();
+      }
+    });
+    // x axis, checkpoints, stops, cursors
+    const bottom = H - B;
+    cx.fillStyle = muted; cx.textAlign = 'center';
+    for (let k = 0; k <= 21; k++) { if (k % (W < 520 ? 5 : 2) === 0 || k === 21) cx.fillText(k + '', X(k), bottom + 11); }
+    cx.textAlign = 'left'; cx.fillText('km', W - R - 14, bottom + 11);
+    T.checks.slice(0, 2).forEach(c => { cx.strokeStyle = col('--good'); cx.setLineDash([2, 3]); cx.beginPath(); cx.moveTo(X(c.km) + .5, 0); cx.lineTo(X(c.km) + .5, bottom); cx.stroke(); cx.setLineDash([]); });
+    if (on.stop) T.stops.forEach(s => { cx.fillStyle = col('--warn'); cx.beginPath(); cx.arc(X(s.ckm), rh - 6, 3, 0, 7); cx.fill(); });
+    if (state.t >= MAT) {
+      if (on.ghost) { const gx = X(ghostKm(state.t)); cx.strokeStyle = col('--ghost'); cx.setLineDash([4, 3]); cx.beginPath(); cx.moveTo(gx + .5, 0); cx.lineTo(gx + .5, bottom); cx.stroke(); cx.setLineDash([]); }
+      const mx = X(state.t >= END_RUN ? T.official_km : P.ckm[idxAtT(state.t)]);
+      cx.strokeStyle = col('--accent'); cx.lineWidth = 2; cx.beginPath(); cx.moveTo(mx, 0); cx.lineTo(mx, bottom); cx.stroke();
+    }
+  }
+  function seekFromChart(ev) {
+    const rect = cv.getBoundingClientRect(), L = 58, R = 10, x = ev.clientX - rect.left;
+    const km = clamp((x - L) / (rect.width - L - R), 0, 1) * T.official_km;
+    state.t = P.t[idxAtKm(km)]; render(true);
+  }
+  let dragging = false;
+  cv.addEventListener('pointerdown', (e) => { dragging = true; cv.setPointerCapture(e.pointerId); seekFromChart(e); });
+  cv.addEventListener('pointermove', (e) => { if (dragging) seekFromChart(e); });
+  cv.addEventListener('pointerup', () => { dragging = false; });
+  window.addEventListener('resize', () => drawChart());
+
+  // ---------- splits ----------
+  const segDefs = [[0, 9.7], [9.7, 17.1], [17.1, T.official_km]];
+  const chipAt = (km) => km === 0 ? 0 : T.checks.find(c => c.km === km).chip;
+  $('segs').innerHTML = segDefs.map(([a, b]) => {
+    const dt = chipAt(b) - chipAt(a), pace = dt / (b - a), ahead = b * PLAN - chipAt(b);
+    return `<div class="seg"><span>${b === T.official_km ? `${a} km–終點` : `${a}–${b} km`}（晶片）</span><b>${fmtP(pace)}</b><em>到此領先計畫 ${fmtT(ahead).replace(/^0:/, '')}</em></div>`;
+  }).join('');
+  $('splits').innerHTML = T.splits.map((s, k) => {
+    const c = (() => { const f = (PLAN - s.pace) / 95; return f >= 0 ? ramp(DIV_FAST, f) : ramp(DIV_SLOW, -f); })();
+    const ahead = s.km * PLAN - s.chip;
+    return `<tr data-k="${k}"><td>${s.km === T.official_km ? '終點' : s.km}</td><td><span class="sw" style="background:${c}"></span>${fmtP(s.pace)}</td><td>${s.hr}</td><td>${(s.step / 10).toFixed(0)}</td><td>${s.cad}</td><td>${fmtT(s.chip)}</td><td>${ahead >= 0 ? '+' : '−'}${fmtT(Math.abs(ahead)).replace(/^0:/, '')}</td></tr>`;
+  }).join('');
+  $('splits').onclick = (e) => {
+    const tr = e.target.closest('tr'); if (!tr) return;
+    showTab('replay');
+    const s = T.splits[+tr.dataset.k], prevKm = +tr.dataset.k ? T.splits[+tr.dataset.k - 1].km : 0;
+    state.t = MAT + (+tr.dataset.k ? T.splits[+tr.dataset.k - 1].chip : 0); render(true);
+    const a = posAtKm(prevKm), b = posAtKm(s.km);
+    if (!state.follow) map.fitBounds([[Math.min(a[0], b[0]), Math.min(a[1], b[1])], [Math.max(a[0], b[0]), Math.max(a[1], b[1])]], { padding: 120, pitch: 60, bearing: map.getBearing(), maxZoom: 16, duration: 900 });
+  };
+  let curRow = -2;
+  function markRow(k) { if (k === curRow) return; curRow = k; [...$('splits').children].forEach((tr, j) => tr.classList.toggle('cur', j === k)); }
+
+  $('stops').innerHTML = T.stops.map(s => {
+    const near = T.aid.filter(a => /補給/.test(a.label)).map(a => [Math.abs(a.ckm - s.ckm), a]).sort((x, y) => x[0] - y[0])[0];
+    const aid = near && near[0] <= 0.5 ? `${near[1].label.replace(/（.*）/, '')}（約 ${near[1].ckm.toFixed(1)} km）` : '—';
+    return `<tr data-t="${s.t}"><td>${s.ckm.toFixed(2)} km</td><td>${fmtT(s.t - MAT)}</td><td>${s.dur} 秒</td><td>${aid}</td></tr>`;
+  }).join('');
+  $('stops').onclick = (e) => {
+    const tr = e.target.closest('tr'); if (!tr) return;
+    showTab('replay'); setFollow(false);
+    state.t = +tr.dataset.t; render(true);
+    map.flyTo({ center: posAtT(state.t), zoom: 16.3, pitch: 60, duration: 900 });
+  };
+
+  // ---------- tabs ----------
+  function showTab(name) {
+    for (const k of ['replay', 'detail']) {
+      $('tab-' + k).setAttribute('aria-selected', k === name);
+      $('view-' + k).hidden = k !== name;
+    }
+    if (name === 'replay') { map.resize(); drawChart(); }
+  }
+  $('tab-replay').onclick = () => showTab('replay');
+  $('tab-detail').onclick = () => { if (state.playing) setPlaying(false); showTab('detail'); };
+  if (location.hash === '#detail') showTab('detail');
+
+  legend();
+  render(true);
+})();
+</script>
