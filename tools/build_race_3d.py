@@ -173,7 +173,114 @@ def track_payload(df: pd.DataFrame) -> dict:
     aid = [{"ckm": k, "label": lab, **{kk: v for kk, v in at_ckm(max(k, 0.02)).items() if kk != "t"}} for k, lab in AID]
     return {"pts": pts, "stops": stops, "kms": km_marks, "splits": splits, "checks": checks, "aid": aid,
             "mat": MAT_OFFSET_S, "chip_end": chip_end, "plan_s_per_km": PLAN_S_PER_KM, "official_km": OFFICIAL_KM,
-            "gps_km": round(df["d"].max() / 1000, 3), "gun": CHIP["gun"]}
+            "gps_km": round(df["d"].max() / 1000, 3), "gun": CHIP["gun"], "_df": df}
+
+
+# ---------- bridge / ramp sections ----------
+
+
+def _seg_dist_m(lon, lat, a, b) -> float:
+    ax, ay = (a["lon"] - lon) * 101000, (a["lat"] - lat) * 111000
+    bx, by = (b["lon"] - lon) * 101000, (b["lat"] - lat) * 111000
+    dx, dy = bx - ax, by - ay
+    L2 = dx * dx + dy * dy
+    f = 0 if L2 == 0 else max(0.0, min(1.0, -(ax * dx + ay * dy) / L2))
+    return math.hypot(ax + f * dx, ay + f * dy)
+
+
+def ramps(df: pd.DataFrame, roads: list[dict]) -> list[dict]:
+    """Climbs and descents of >= 4 m (watch altitude, 1.5 % over 60 m), named after the OSM bridge they run on."""
+    chip_end = MAT_OFFSET_S + CHIP["splits"][-1][1]
+    r = df.loc[MAT_OFFSET_S:chip_end].copy()
+    r["alt_r"] = r["alt"].rolling(15, center=True, min_periods=1).mean()
+    km, alt = r["ckm"].to_numpy(), r["alt_r"].to_numpy()
+    n, j, trend = len(r), 0, []
+    for i in range(n):
+        while j < n - 1 and km[j] - km[i] < 0.06:
+            j += 1
+        g = (alt[j] - alt[i]) / max((km[j] - km[i]) * 1000, 1)
+        trend.append(1 if g > 0.015 else -1 if g < -0.015 else 0)
+    spans, cur = [], None
+    for i, s in enumerate(trend):
+        if cur and s == cur[0] and km[i] - km[cur[2]] <= 0.05:
+            cur[2] = i
+        elif s:
+            if cur:
+                spans.append(cur)
+            cur = [s, i, i]
+    if cur:
+        spans.append(cur)
+    bridges = bridge_ways(roads)
+    out = []
+    for s, i0, i1 in spans:
+        i1 = min(n - 1, i1 + 30)  # trend is measured 60 m ahead: extend to the end of the slope
+        rise = alt[i1] - alt[i0]
+        if abs(rise) < 4 or (s > 0) != (rise > 0):
+            continue
+        name = on_bridge(bridges, r["lon"].iloc[i0:i1 + 1:3], r["lat"].iloc[i0:i1 + 1:3]) or "坡道"
+        via = ""
+        if s < 0 and out and out[-1]["kind"] == "up" and alt[i0] >= out[-1]["a1"] - 3                 and r["alt_r"].loc[out[-1]["t1"]:int(r.index[i0])].min() >= out[-1]["a1"] - 3:
+            # coming down from the structure climbed earlier: name the descent after it, keep the ramp as "via"
+            name, via = out[-1]["name"], ("" if name == out[-1]["name"] else name)
+        t0, t1 = int(r.index[i0]), int(r.index[i1])
+        dist = (km[i1] - km[i0]) * 1000
+        out.append({"kind": "up" if s > 0 else "down", "name": name, "via": via,
+                    "km0": round(km[i0], 3), "km1": round(km[i1], 3), "t0": t0, "t1": t1,
+                    "a0": round(alt[i0], 1), "a1": round(alt[i1], 1), "rise": round(rise, 1),
+                    "grade": round(rise / dist * 100, 1), "pace": round((t1 - t0) / dist * 1000),
+                    "hr": round(df.loc[t0:t1, "hr"].mean()), "hr0": round(df.loc[t0, "hr"]), "hr1": round(df.loc[t1, "hr"])})
+    print("ramps:", [(x["kind"], x["name"], x["via"], x["km0"], x["km1"], x["rise"], x["grade"]) for x in out])
+    return out
+
+
+def bridge_ways(roads: list[dict]) -> list[dict]:
+    return [e for e in roads if e["type"] == "way" and e.get("tags", {}).get("bridge") and e.get("geometry")]
+
+
+def on_bridge(bridges: list[dict], lons, lats) -> str | None:
+    """Name of the bridge the samples run on: the one within 12 m of the most samples (passing under scores few)."""
+    names: dict[str, int] = {}
+    for lon, lat in zip(lons, lats):
+        for e in bridges:
+            g = e["geometry"]
+            if e["tags"].get("name") and any(_seg_dist_m(lon, lat, g[k], g[k + 1]) < 12 for k in range(len(g) - 1)):
+                names[e["tags"]["name"]] = names.get(e["tags"]["name"], 0) + 1
+    return max(names, key=lambda nm: (names[nm], "橋" in nm)) if names else None
+
+
+def _in_ring(lon: float, lat: float, ring: list) -> bool:
+    inside, j = False, len(ring) - 1
+    for i in range(len(ring)):
+        (xi, yi), (xj, yj) = ring[i], ring[j]
+        if (yi > lat) != (yj > lat) and lon < (xj - xi) * (lat - yi) / (yj - yi) + xi:
+            inside = not inside
+        j = i
+    return inside
+
+
+def river_crossings(pts: dict, water_fc: dict, roads: list[dict], mat: int, chip_end: int) -> list[dict]:
+    """Stretches where the route is over a water polygon (>= 40 m), named after the bridge used."""
+    polys = [f["geometry"]["coordinates"] for f in water_fc["features"] if f["geometry"]["type"] == "Polygon"]
+    over = []
+    for i, t in enumerate(pts["t"]):
+        lon, lat = pts["lon"][i], pts["lat"][i]
+        over.append(mat <= t <= chip_end and any(_in_ring(lon, lat, p[0]) and not any(_in_ring(lon, lat, h) for h in p[1:])
+                                                 for p in polys))
+    out, i, bridges = [], 0, bridge_ways(roads)
+    while i < len(over):
+        if not over[i]:
+            i += 1
+            continue
+        j = i
+        while j + 1 < len(over) and over[j + 1]:
+            j += 1
+        if (pts["ckm"][j] - pts["ckm"][i]) * 1000 >= 40:
+            name = on_bridge(bridges, pts["lon"][i:j + 1], pts["lat"][i:j + 1])
+            out.append({"km0": pts["ckm"][i], "km1": pts["ckm"][j], "t0": pts["t"][i], "t1": pts["t"][j],
+                        "bridge": name or "", "lon": pts["lon"][(i + j) // 2], "lat": pts["lat"][(i + j) // 2]})
+        i = j + 1
+    print("river crossings:", [(c["bridge"], c["km0"], c["km1"]) for c in out])
+    return out
 
 
 # ---------- OSM -> compact GeoJSON ----------
@@ -295,10 +402,14 @@ def main() -> None:
     a = ap.parse_args()
     df = load_track(a.fit)
     track = track_payload(df)
+    roads_raw = json.loads((a.osm / "roads.json").read_text(encoding="utf-8"))["elements"]
+    track["ramps"] = ramps(track.pop("_df"), roads_raw)
     route_ll = list(zip(track["pts"]["lon"][::20], track["pts"]["lat"][::20]))
+    osm = osm_payload(a.osm, route_ll)
+    track["rivers"] = river_crossings(track["pts"], osm["water"], roads_raw, track["mat"], track["chip_end"])
     data = {
         "race": {"name": "長榮馬拉松 半馬", "name_en": "EVA AIR Marathon 2026", "date": "2026-10-25", "chip": 9023, "gun": 9097},
-        "track": track, "osm": osm_payload(a.osm, route_ll),
+        "track": track, "osm": osm,
         "landmarks": [dict(zip(("name", "en", "lat", "lon", "kind"), x)) for x in LANDMARKS],
         "bridges": [dict(zip(("name", "en", "lat", "lon"), x)) for x in BRIDGES],
     }

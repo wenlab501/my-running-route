@@ -19,8 +19,11 @@
   --fg: #e7eaf3;
   --muted: #8f99b6;
   --accent: #ff8a3d;      /* sunrise: you */
-  --ghost: #b8c4ff;       /* plan pace twin */
+  --plan: #b8c4ff;        /* comparisons with the pre-race plan (detail tab) */
   --good: #7fd1ae;
+  --up: #ffc94d;          /* climbing onto a bridge */
+  --down: #57c7ff;        /* coming down */
+  --river: #9be7d8;       /* over the Keelung River */
   --warn: #ffca28;
   --font-display: "Barlow Condensed", "Arial Narrow", "Noto Sans TC", sans-serif;
   --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
@@ -43,7 +46,6 @@ h1 .num { color: var(--accent); font-size: 1.12em; margin-left: .25em; }
 .fact { display: flex; flex-direction: column; }
 .fact b { font-family: var(--font-display); font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; }
 .fact span { font-size: 12px; color: var(--muted); }
-.fact.plan b { color: var(--ghost); }
 
 .stage { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 12px; }
 .mapwrap { position: relative; min-width: 0; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: #0f1728; height: min(68vh, 720px); min-height: 380px; }
@@ -58,8 +60,6 @@ h1 .num { color: var(--accent); font-size: 1.12em; margin-left: .25em; }
 .live .grid div { display: flex; flex-direction: column; }
 .live .grid b { font-family: var(--font-display); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.15; }
 .live .grid span { font-size: 12px; color: var(--muted); }
-.gap { margin-top: 10px; padding: 8px 10px; border-radius: 8px; background: var(--panel-2); font-size: 13px; display: flex; gap: 8px; align-items: baseline; }
-.gap b { font-family: var(--font-display); font-size: 20px; color: var(--ghost); font-variant-numeric: tabular-nums; }
 .status { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 99px; font-size: 12px; background: var(--panel-2); color: var(--muted); vertical-align: middle; }
 .status.walk { background: rgba(255, 202, 40, .16); color: var(--warn); }
 .status.done { background: rgba(127, 209, 174, .16); color: var(--good); }
@@ -102,7 +102,7 @@ button:hover, select:hover { border-color: #3b4a72; }
 .seg { background: var(--panel-2); border-radius: 8px; padding: 8px 10px; }
 .seg span { font-size: 12px; color: var(--muted); display: block; }
 .seg b { font-family: var(--font-display); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.seg em { font-style: normal; font-size: 12px; color: var(--ghost); display: block; }
+.seg em { font-style: normal; font-size: 12px; color: var(--plan); display: block; }
 .tablewrap { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
 th, td { padding: 5px 8px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
@@ -133,8 +133,33 @@ td .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; mar
 .mk-run { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .mk-run .tag { font-family: var(--font-display); font-weight: 700; font-size: 13px; padding: 0 6px; border-radius: 4px; background: var(--accent); color: #1a0f05; }
 .mk-run .pin { width: 14px; height: 14px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px rgba(255,138,61,.35), 0 0 14px 4px rgba(255,138,61,.55); }
-.mk-run.ghost .tag { background: var(--ghost); color: #10162a; }
-.mk-run.ghost .pin { background: var(--ghost); box-shadow: 0 0 0 3px rgba(184,196,255,.3); }
+.mk-run .pin { transition: background .3s, box-shadow .3s; }
+.mk-run.fx-up .tag { background: var(--up); }
+.mk-run.fx-down .tag { background: var(--down); }
+.mk-run.fx-river .tag { background: var(--river); }
+.mk-run.fx-up .pin { background: var(--up); animation: halo-up 1.1s ease-out infinite; }
+.mk-run.fx-down .pin { background: var(--down); animation: halo-down 1.1s ease-out infinite; }
+.mk-run.fx-river .pin { background: var(--river); animation: halo-river 1.4s ease-out infinite; }
+@keyframes halo-up { from { box-shadow: 0 0 0 0 rgba(255,201,77,.75), 0 0 16px 4px rgba(255,201,77,.6); } to { box-shadow: 0 0 0 22px rgba(255,201,77,0), 0 0 16px 4px rgba(255,201,77,.6); } }
+@keyframes halo-down { from { box-shadow: 0 0 0 0 rgba(87,199,255,.75), 0 0 16px 4px rgba(87,199,255,.6); } to { box-shadow: 0 0 0 22px rgba(87,199,255,0), 0 0 16px 4px rgba(87,199,255,.6); } }
+@keyframes halo-river { from { box-shadow: 0 0 0 0 rgba(155,231,216,.8), 0 0 18px 6px rgba(155,231,216,.55); } to { box-shadow: 0 0 0 30px rgba(155,231,216,0), 0 0 18px 6px rgba(155,231,216,.55); } }
+.mk-ev { font-size: 12px; font-weight: 700; padding: 2px 7px; border-radius: 99px; color: #10162a; box-shadow: 0 1px 4px rgba(0,0,0,.6); }
+.mk-ev.up { background: var(--up); }
+.mk-ev.down { background: var(--down); }
+.mk-ev.river { background: var(--river); }
+#map:not(.zoomed) .mk-ev .tx { display: none; }
+.evbanner { position: absolute; left: 50%; top: max(10px, env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 3; min-width: min(300px, 70%); max-width: calc(100% - 180px);
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; align-items: center; padding: 8px 12px 10px; border-radius: 10px;
+  background: rgba(11,17,32,.86); backdrop-filter: blur(6px); border: 1px solid var(--evc, var(--up)); box-shadow: 0 0 24px -6px var(--evc, var(--up)); animation: ev-in .35s ease-out; }
+.evbanner .ic { grid-row: span 2; font-size: 26px; line-height: 1; color: var(--evc); }
+.evbanner b { font-size: 15px; }
+.evbanner .sub { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.evbanner .meter { grid-column: 1 / -1; height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; margin-top: 6px; }
+.evbanner .meter i { display: block; height: 100%; width: 0; background: var(--evc); }
+.evbanner .slow { margin-left: 6px; font-size: 11px; padding: 0 6px; border-radius: 99px; border: 1px solid var(--evc); color: var(--evc); font-weight: 500; }
+@keyframes ev-in { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (max-width: 600px) { .evbanner { top: 52px; max-width: calc(100% - 20px); } }
+@media (prefers-reduced-motion: reduce) { .mk-run .pin, .evbanner { animation: none !important; } }
 .maptools { position: absolute; top: max(10px, env(safe-area-inset-top, 0px)); left: 10px; display: flex; gap: 6px; z-index: 2; }
 .maptools button { background: rgba(18,26,44,.88); backdrop-filter: blur(4px); font-size: 13px; }
 .maptools button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
@@ -186,6 +211,7 @@ td .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; mar
       <button id="follow" aria-pressed="false" type="button">鏡頭跟隨</button>
       <button id="overview" type="button">全覽</button>
     </div>
+    <div class="evbanner" id="evb" hidden><span class="ic" id="evb-ic"></span><b id="evb-t"></b><span class="sub" id="evb-s"></span><div class="meter"><i id="evb-m"></i></div></div>
   </div>
   <aside class="panel">
     <section class="card live" aria-live="off">
@@ -198,7 +224,6 @@ td .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; mar
         <div><b id="lv-step">–</b><span>步幅 cm</span></div>
         <div><b id="lv-cad">–</b><span>步頻 spm</span></div>
       </div>
-      <div class="gap"><span>計畫分身 7:55/km</span><b id="lv-gap">–</b><span id="lv-gapd"></span></div>
     </section>
     <section class="card">
       <h2>3D 呈現</h2>
@@ -238,6 +263,16 @@ td .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; mar
   </section>
   <div class="side">
   <section class="card">
+    <h2>上下橋與跨河</h2>
+    <p class="hint">由手錶海拔與 OSM 橋樑、河面資料自動找出；點任一列會切到 3D 瀏覽並播放該段。</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>路段</th><th>區間</th><th>高差</th><th>坡度</th><th>配速</th><th>心率</th></tr></thead>
+        <tbody id="evrows"></tbody>
+      </table>
+    </div>
+  </section>
+  <section class="card">
     <h2>走路與停頓</h2>
     <p class="hint">5 秒均速低於 6 km/h 且持續超過 6 秒的時段。</p>
     <div class="tablewrap">
@@ -251,7 +286,8 @@ td .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; mar
     <h2>資料與說明</h2>
     <p>軌跡、配速、心率、步幅、步頻與海拔來自 Garmin 手錶每秒紀錄（手錶量得 <span id="gpskm"></span> km）。公里數依大會 9.7 km、17.1 km 與終點三個計時點分段校正，讓回放時間與晶片時間一致。</p>
     <ul>
-      <li>計畫分身以賽前約定的 7:50–8:00/km 取中間值 7:55/km 等速前進，從起跑感應墊同時出發。</li>
+      <li>配速顏色以賽前約定 7:50–8:00/km 的中間值 7:55/km 為中點。</li>
+      <li>上下橋：手錶海拔（15 秒平滑）在 60 m 內坡度超過 1.5%、累計高差至少 4 m 的路段，橋名取自 OSM 橋樑資料；跨河：軌跡落在 OSM 基隆河河面範圍內的路段。播放經過這些路段時會放慢到 0.35 倍。</li>
       <li>心率顏色依個人 LTHR 148 的區間：Z2 123–132、穩態 133–140、節奏 141–144、閾值 145–150。</li>
       <li>步幅、步頻為手腕估計值；海拔為手錶紀錄，起伏多來自橋與堤頂坡道，高度模式放大 8 倍。</li>
       <li>補給站與醫護站依大會路線圖目測標示，位置是概略值。黃點是手錶偵測到的走路或停頓（5 秒均速低於 6 km/h 且超過 6 秒）。</li>
@@ -267,7 +303,7 @@ td .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; mar
 const D = "__RACE_DATA__";
 (() => {
   const T = D.track, P = T.pts, N = P.t.length, MAT = T.mat, END_RUN = T.chip_end, PLAN = T.plan_s_per_km;
-  const END = Math.max(END_RUN, MAT + Math.ceil(T.official_km * PLAN)) + 4;
+  const END = END_RUN + 4;
   const $ = (id) => document.getElementById(id);
 
   // ---------- helpers ----------
@@ -287,7 +323,6 @@ const D = "__RACE_DATA__";
     const a = P.ckm[i - 1], b = P.ckm[i], r = b > a ? clamp((km - a) / (b - a), 0, 1) : 0;
     return [lerp(P.lon[i - 1], P.lon[i], r), lerp(P.lat[i - 1], P.lat[i], r)];
   }
-  const ghostKm = (t) => clamp((t - MAT) / PLAN, 0, T.official_km);
   const hex = (c) => '#' + c.map(v => Math.round(clamp(v, 0, 255)).toString(16).padStart(2, '0')).join('');
   function ramp(stops, f) {
     f = clamp(f, 0, 1); const n = stops.length - 1, i = Math.min(n - 1, Math.floor(f * n)), r = f * n - i;
@@ -317,7 +352,23 @@ const D = "__RACE_DATA__";
     if (key === 'alt') return 4 + Math.max(0, P.alt[i]) * 8;
     return 8 + norm(M[key], M[key].v(i)) * 110;
   }
-  const state = { h: 'hr', c: 'pace', t: END_RUN, playing: false, speed: 60, follow: false, bearing: -18 };
+  // bridge / ramp / river events (detected at build time)
+  const EV_COL = { up: '#ffc94d', down: '#57c7ff', river: '#9be7d8' };
+  const EV = [
+    ...T.ramps.map(r => ({ type: r.kind, title: (r.kind === 'up' ? '上' : '下') + r.name, sub: r.via ? '經' + r.via : '', km0: r.km0, km1: r.km1, t0: r.t0, t1: r.t1,
+      rise: r.rise, grade: r.grade, pace: r.pace, hr: r.hr, hr0: r.hr0, hr1: r.hr1 })),
+    ...T.rivers.map(c => ({ type: 'river', title: '跨越基隆河', sub: c.bridge, km0: c.km0, km1: c.km1, t0: c.t0, t1: c.t1, lon: c.lon, lat: c.lat })),
+  ].sort((a, b) => a.t0 - b.t0);
+  EV.forEach(e => {
+    if (e.pace == null) {   // river crossings: summarise from the 2-s samples
+      const a = idxAtT(e.t0), b = idxAtT(e.t1); let h = 0; for (let k = a; k <= b; k++) h += P.hr[k];
+      e.pace = Math.round((e.t1 - e.t0) / (e.km1 - e.km0)); e.hr = Math.round(h / (b - a + 1)); e.hr0 = Math.round(P.hr[a]); e.hr1 = Math.round(P.hr[b]);
+    }
+  });
+  const evAt = (t) => EV.find(e => t >= e.t0 && t <= e.t1);
+  const evLine = (e) => { const c = []; for (let k = idxAtT(e.t0); k <= idxAtT(e.t1); k++) c.push([P.lon[k], P.lat[k]]); return c; };
+  const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const state = { h: 'hr', c: 'pace', t: END_RUN, playing: false, speed: 60, follow: false, bearing: -18, pitch: 60, zoom: 15.7 };
 
   // ---------- header facts ----------
   const iStart = idxAtT(MAT), iEnd = idxAtT(END_RUN);
@@ -327,7 +378,6 @@ const D = "__RACE_DATA__";
     ['平均配速', fmtP(D.race.chip / T.official_km) + '/km'],
     ['槍聲時間', fmtT(D.race.gun)],
     ['平均心率', avgHr + ' bpm'],
-    ['計畫 7:55/km 完賽', fmtT(T.official_km * PLAN), 'plan'],
   ].map(([k, v, c]) => `<div class="fact ${c || ''}"><b>${v}</b><span>${k}</span></div>`).join('');
   $('gpskm').textContent = T.gps_km.toFixed(2);
 
@@ -390,6 +440,12 @@ const D = "__RACE_DATA__";
     map.addLayer({ id: 'bld', type: 'fill-extrusion', source: 'bld', paint: { 'fill-extrusion-color': '#2a3554', 'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-opacity': 0.72 } });
     map.addLayer({ id: 'wall', type: 'fill-extrusion', source: 'wall', paint: { 'fill-extrusion-color': ['get', 'c'], 'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-opacity': 0.88 } });
     map.addLayer({ id: 'pillars', type: 'fill-extrusion', source: 'pillars', paint: { 'fill-extrusion-color': ['get', 'c'], 'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-opacity': 0.95 } });
+    map.addSource('fx', { type: 'geojson', data: { type: 'FeatureCollection', features: EV.map(e => ({ type: 'Feature', properties: { c: EV_COL[e.type] }, geometry: { type: 'LineString', coordinates: evLine(e) } })) } });
+    map.addSource('fx-pt', { type: 'geojson', data: { type: 'FeatureCollection', features: EV.filter(e => e.type === 'river').map(e => ({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [e.lon, e.lat] } })) } });
+    map.addLayer({ id: 'fx-pulse', type: 'circle', source: 'fx-pt', paint: { 'circle-radius': 18, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': EV_COL.river, 'circle-stroke-width': 2, 'circle-stroke-opacity': 0.6, 'circle-pitch-alignment': 'map' } }, 'bld');
+    map.addLayer({ id: 'fx-glow', type: 'line', source: 'fx', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'c'], 'line-width': 16, 'line-blur': 8, 'line-opacity': 0.5 } }, 'bld');
+    map.addLayer({ id: 'fx-flow', type: 'line', source: 'fx', layout: { 'line-cap': 'butt', 'line-join': 'round' }, paint: { 'line-color': ['get', 'c'], 'line-width': 4, 'line-dasharray': [0, 4, 3] } }, 'bld');
+    fxLoop();
     overview(false);
     buildMarkers();
     render(true);
@@ -399,7 +455,7 @@ const D = "__RACE_DATA__";
   map.on('dragstart', () => { if (state.follow) setFollow(false); });
 
   // ---------- markers ----------
-  const groups = { lm: [], br: [], aid: [], km: [], stop: [] };
+  const groups = { lm: [], br: [], aid: [], km: [], stop: [], ev: [] };
   function el(cls, html, title) { const e = document.createElement('div'); e.className = 'mk ' + cls; e.innerHTML = html; if (title) e.title = title; return e; }
   function addMk(group, e, ll, anchor = 'center', popup) {
     const m = new maplibregl.Marker({ element: e, anchor }).setLngLat(ll).addTo(map);
@@ -416,14 +472,19 @@ const D = "__RACE_DATA__";
     T.kms.forEach(k => { if (k.km <= 21) addMk('km', el('mk-km', k.km + 'K'), [k.lon, k.lat], 'bottom', `<b>${k.km} km</b>`); });
     T.checks.slice(0, 2).forEach(c => {
       const ll = posAtKm(c.km);
-      addMk('km', el('mk-km chk', c.km + 'K 計時'), ll, 'bottom', `<b>${c.km} km 計時點</b><br>晶片 ${fmtT(c.chip)}，計畫 ${fmtT(c.plan)}<br>領先計畫 ${fmtT(c.plan - c.chip)}`);
+      addMk('km', el('mk-km chk', c.km + 'K 計時'), ll, 'bottom', `<b>${c.km} km 計時點</b><br>晶片 ${fmtT(c.chip)}`);
     });
     T.stops.forEach(s => addMk('stop', el('mk-stop', ''), [s.lon, s.lat], 'center', `<b>走路／停頓 ${s.dur} 秒</b><br>約 ${s.ckm.toFixed(2)} km，晶片 ${fmtT(s.t - MAT)}`));
     runMk = new maplibregl.Marker({ element: el('mk-run', '<span class="tag">你</span><span class="pin"></span>'), anchor: 'bottom' }).setLngLat(posAtT(state.t)).addTo(map);
-    ghostMk = new maplibregl.Marker({ element: el('mk-run ghost', '<span class="tag">計畫 7:55</span><span class="pin"></span>'), anchor: 'bottom' }).setLngLat(posAtKm(ghostKm(state.t))).addTo(map);
+    EV.forEach(e => {
+      const ic = e.type === 'up' ? '↗' : e.type === 'down' ? '↘' : '≈';
+      const tx = e.type === 'river' ? `${e.title}・${e.sub}` : `${e.title} ${e.rise > 0 ? '+' : '−'}${Math.abs(e.rise).toFixed(1)} m`;
+      addMk('ev', el('mk-ev ' + e.type, `${ic}<span class="tx"> ${tx}</span>`), e.type === 'river' ? [e.lon, e.lat] : posAtT(e.t0), e.type === 'river' ? 'center' : 'bottom',
+        `<b>${e.title}</b>${e.sub ? '（' + e.sub + '）' : ''}<br>${e.km0.toFixed(2)}–${e.km1.toFixed(2)} km${e.type === 'river' ? '' : `，高差 ${e.rise > 0 ? '+' : '−'}${Math.abs(e.rise).toFixed(1)} m，坡度 ${Math.abs(e.grade).toFixed(1)}%`}`);
+    });
     applyToggles();
   }
-  let runMk, ghostMk, ready = false;
+  let runMk, ready = false;
 
   // ---------- controls ----------
   for (const [k, m] of Object.entries(M)) { $('hsel').add(new Option(m.label + (k === 'alt' ? '（×8）' : ''), k)); $('csel').add(new Option(m.label, k)); }
@@ -440,14 +501,15 @@ const D = "__RACE_DATA__";
     else html = `<div class="bar" style="background:linear-gradient(90deg,${SEQ.map(c => hex(c)).join(',')})"></div><div class="ticks"><span>${m.lo} ${m.unit}</span><span>${m.hi} ${m.unit}</span></div>`;
     $('legend').innerHTML = html;
   }
-  const TOG = [['bld', '3D 建築', '#5a6890'], ['lm', '地標', '#e7d7b8'], ['br', '橋樑', '#9fd3ff'], ['aid', '補給／醫護', '#6fc3ff'], ['km', '公里牌', '#e7eaf3'], ['stop', '走路停頓', '#ffca28'], ['ghost', '計畫分身', '#b8c4ff']];
+  const TOG = [['bld', '3D 建築', '#5a6890'], ['lm', '地標', '#e7d7b8'], ['br', '橋樑', '#9fd3ff'], ['aid', '補給／醫護', '#6fc3ff'], ['km', '公里牌', '#e7eaf3'], ['stop', '走路停頓', '#ffca28'], ['fx', '上下橋特效', '#ffc94d']];
   const on = Object.fromEntries(TOG.map(t => [t[0], true]));
   $('toggles').innerHTML = TOG.map(([k, l, c]) => `<button type="button" class="chip" aria-pressed="true" data-k="${k}"><i style="background:${c}"></i>${l}</button>`).join('');
   $('toggles').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; on[b.dataset.k] = !on[b.dataset.k]; b.setAttribute('aria-pressed', on[b.dataset.k]); applyToggles(); };
   function applyToggles() {
     for (const g of ['lm', 'br', 'aid', 'km', 'stop']) groups[g].forEach(m => { m.getElement().hidden = !on[g]; });
+    groups.ev.forEach(m => { m.getElement().hidden = !on.fx; });
     if (map.getLayer('bld')) map.setLayoutProperty('bld', 'visibility', on.bld ? 'visible' : 'none');
-    if (ghostMk) ghostMk.getElement().hidden = !on.ghost;
+    for (const id of ['fx-glow', 'fx-flow', 'fx-pulse']) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', on.fx ? 'visible' : 'none');
     render(true);
   }
   const SPEEDS = [30, 60, 120, 300];
@@ -461,12 +523,48 @@ const D = "__RACE_DATA__";
   $('follow').onclick = () => setFollow(!state.follow);
   $('overview').onclick = () => { setFollow(false); overview(); };
 
+  // ---------- bridge effects: marching dashes on the ramps, a ripple on the river ----------
+  const DASH = [[0, 4, 3], [0.5, 4, 2.5], [1, 4, 2], [1.5, 4, 1.5], [2, 4, 1], [2.5, 4, 0.5], [3, 4, 0], [0, 0.5, 3, 3.5], [0, 1, 3, 3], [0, 1.5, 3, 2.5], [0, 2, 3, 2], [0, 2.5, 3, 1.5], [0, 3, 3, 1], [0, 3.5, 3, 0.5]];
+  let dashStep = -1;
+  function fxLoop(now = 0) {
+    if (!RM && on.fx && map.getLayer('fx-flow')) {
+      const k = Math.floor(now / 70) % DASH.length;
+      if (k !== dashStep) { dashStep = k; map.setPaintProperty('fx-flow', 'line-dasharray', DASH[k]); }
+      const f = (now % 1600) / 1600;
+      map.setPaintProperty('fx-pulse', 'circle-radius', 10 + f * 40);
+      map.setPaintProperty('fx-pulse', 'circle-stroke-opacity', 0.7 * (1 - f));
+    }
+    requestAnimationFrame(fxLoop);
+  }
+  let shownEv = null;
+  function showEvent(e, t) {
+    const runEl = runMk && runMk.getElement();
+    if (runEl) {
+      runEl.classList.toggle('fx-up', !!e && e.type === 'up'); runEl.classList.toggle('fx-down', !!e && e.type === 'down'); runEl.classList.toggle('fx-river', !!e && e.type === 'river');
+      runEl.querySelector('.tag').textContent = !e ? '你' : e.type === 'up' ? '你 ↗' : e.type === 'down' ? '你 ↘' : '你 ≈';
+    }
+    const b = $('evb');
+    if (!e) { if (shownEv) { b.hidden = true; shownEv = null; } return; }
+    if (shownEv !== e) {
+      shownEv = e; b.hidden = false; b.style.setProperty('--evc', EV_COL[e.type]);
+      b.style.animation = 'none'; void b.offsetWidth; b.style.animation = '';
+      $('evb-ic').textContent = e.type === 'up' ? '↗' : e.type === 'down' ? '↘' : '≈';
+    }
+    const i = idxAtT(t), slow = state.playing ? '<span class="slow">慢動作 0.35×</span>' : '';
+    $('evb-t').innerHTML = (e.type === 'river' ? `${e.title}・${e.sub}` : e.title) + slow;
+    $('evb-s').textContent = e.type === 'river'
+      ? `河面約 ${Math.round((e.km1 - e.km0) * 1000)} m　配速 ${fmtP(paceAt(i))}　心率 ${Math.round(P.hr[i])}`
+      : `${e.sub ? e.sub + '　' : ''}坡度 ${Math.abs(e.grade).toFixed(1)}%　海拔 ${P.alt[i].toFixed(1)} m　心率 ${Math.round(P.hr[i])}`;
+    $('evb-m').style.width = `${clamp((t - e.t0) / (e.t1 - e.t0), 0, 1) * 100}%`;
+  }
+
   // ---------- playback ----------
   let last = 0, frame = 0, wallFilter = 'null';
   function tick(now) {
     if (!state.playing) return;
     const dt = Math.min(0.5, (now - last) / 1000); last = now;
-    state.t = Math.min(END, state.t + dt * state.speed);
+    const slow = on.fx && evAt(state.t) ? 0.35 : 1;
+    state.t = Math.min(END, state.t + dt * state.speed * slow);
     render(false);
     if (state.t >= END) setPlaying(false); else requestAnimationFrame(tick);
   }
@@ -477,8 +575,9 @@ const D = "__RACE_DATA__";
   }
   function render(force) {
     const t = state.t, tr = clamp(t, MAT, END_RUN), i = idxAtT(tr), pos = posAtT(tr);
-    const gk = ghostKm(t), gpos = posAtKm(gk);
-    if (runMk) { runMk.setLngLat(pos); ghostMk.setLngLat(gpos); }
+    if (runMk) runMk.setLngLat(pos);
+    const ev = on.fx && t >= MAT && t < END_RUN ? evAt(t) : null;
+    showEvent(ev, t);
     frame++;
     if (map.getLayer('wall') && (force || frame % 6 === 0)) {
       const grown = t < END_RUN ? ['<=', ['get', 'i'], i] : null;
@@ -488,13 +587,15 @@ const D = "__RACE_DATA__";
       const coords = []; for (let k = iStart; k <= i; k++) coords.push([P.lon[k], P.lat[k]]); coords.push(pos);
       map.getSource('prog').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: coords } });
       const pill = [hexagon(pos, 6, heightOf(state.h, i) + 22, '#ff8a3d')];
-      if (on.ghost) pill.push(hexagon(gpos, 5, heightOf(state.h, idxAtKm(gk)) + 16, '#b8c4ff'));
       map.getSource('pillars').setData({ type: 'FeatureCollection', features: pill });
     }
     if (state.follow && ready) {
       let target = heading(i), d = ((target - state.bearing + 540) % 360) - 180;
       state.bearing += d * (force ? 1 : 0.04);
-      map.jumpTo({ center: pos, bearing: state.bearing, pitch: 60, zoom: 15.7 });
+      // on a bridge the camera tilts lower and moves in, so the climb reads as a climb
+      const tp = ev ? 72 : 60, tz = ev ? 16.3 : 15.7, k = force ? 1 : 0.05;
+      state.pitch += (tp - state.pitch) * k; state.zoom += (tz - state.zoom) * k;
+      map.jumpTo({ center: pos, bearing: state.bearing, pitch: state.pitch, zoom: state.zoom });
     }
     // readout
     const started = t >= MAT, finished = t >= END_RUN;
@@ -509,12 +610,6 @@ const D = "__RACE_DATA__";
     $('lv-hr').textContent = started ? Math.round(P.hr[i]) : '–';
     $('lv-step').textContent = started ? (P.step[i] / 10).toFixed(0) : '–';
     $('lv-cad').textContent = started ? Math.round(P.cad[i]) : '–';
-    if (started) {
-      const myKm = finished ? T.official_km : ck, chipNow = Math.min(t, END_RUN) - MAT;
-      const ahead = myKm * PLAN - chipNow;
-      $('lv-gap').textContent = (ahead >= 0 ? '領先 ' : '落後 ') + fmtT(Math.abs(ahead)).replace(/^0:/, '');
-      $('lv-gapd').textContent = `（距離差 ${Math.abs(myKm - gk).toFixed(2)} km）`;
-    } else { $('lv-gap').textContent = '–'; $('lv-gapd').textContent = ''; }
     $('tlabel').textContent = started ? `晶片 ${fmtT(t - MAT)}` : `起跑前 ${Math.round(MAT - t)} 秒`;
     if (+scrub.value !== Math.round(t)) scrub.value = Math.round(t);
     if (force || frame % 4 === 0) drawChart();
@@ -542,6 +637,7 @@ const D = "__RACE_DATA__";
     ROWS.forEach((r, ri) => {
       const top = ri * (rh + gapY), Y = (v) => top + (1 - clamp((v - r.lo) / (r.hi - r.lo), 0, 1)) * rh;
       cx.fillStyle = col('--panel-2'); cx.fillRect(L, top, W - L - R, rh);
+      if (on.fx) EV.forEach(e => { cx.fillStyle = EV_COL[e.type] + '2e'; cx.fillRect(X(e.km0), top, Math.max(2, X(e.km1) - X(e.km0)), rh); });
       if (r.band) { cx.fillStyle = 'rgba(184,196,255,.16)'; cx.fillRect(L, Y(r.band[0]), W - L - R, Y(r.band[1]) - Y(r.band[0]) || 1); }
       cx.strokeStyle = line; cx.lineWidth = 1; cx.fillStyle = muted; cx.textAlign = 'right';
       r.ticks.forEach(v => { const y = Y(v); cx.beginPath(); cx.moveTo(L, y + .5); cx.lineTo(W - R, y + .5); cx.stroke(); cx.fillText(r.f(v), L - 6, y); });
@@ -570,7 +666,6 @@ const D = "__RACE_DATA__";
     T.checks.slice(0, 2).forEach(c => { cx.strokeStyle = col('--good'); cx.setLineDash([2, 3]); cx.beginPath(); cx.moveTo(X(c.km) + .5, 0); cx.lineTo(X(c.km) + .5, bottom); cx.stroke(); cx.setLineDash([]); });
     if (on.stop) T.stops.forEach(s => { cx.fillStyle = col('--warn'); cx.beginPath(); cx.arc(X(s.ckm), rh - 6, 3, 0, 7); cx.fill(); });
     if (state.t >= MAT) {
-      if (on.ghost) { const gx = X(ghostKm(state.t)); cx.strokeStyle = col('--ghost'); cx.setLineDash([4, 3]); cx.beginPath(); cx.moveTo(gx + .5, 0); cx.lineTo(gx + .5, bottom); cx.stroke(); cx.setLineDash([]); }
       const mx = X(state.t >= END_RUN ? T.official_km : P.ckm[idxAtT(state.t)]);
       cx.strokeStyle = col('--accent'); cx.lineWidth = 2; cx.beginPath(); cx.moveTo(mx, 0); cx.lineTo(mx, bottom); cx.stroke();
     }
@@ -619,6 +714,19 @@ const D = "__RACE_DATA__";
     showTab('replay'); setFollow(false);
     state.t = +tr.dataset.t; render(true);
     map.flyTo({ center: posAtT(state.t), zoom: 16.3, pitch: 60, duration: 900 });
+  };
+
+  $('evrows').innerHTML = EV.map((e, k) => {
+    const ic = e.type === 'up' ? '↗' : e.type === 'down' ? '↘' : '≈';
+    const nm = e.type === 'river' ? `${e.title}（${e.sub}）` : e.title + (e.sub ? `（${e.sub}）` : '');
+    const rise = e.type === 'river' ? '—' : `${e.rise > 0 ? '+' : '−'}${Math.abs(e.rise).toFixed(1)} m`;
+    const grade = e.type === 'river' ? '—' : `${Math.abs(e.grade).toFixed(1)}%`;
+    return `<tr data-k="${k}"><td><span class="sw" style="background:${EV_COL[e.type]}"></span>${ic} ${nm}</td><td>${e.km0.toFixed(2)}–${e.km1.toFixed(2)} km</td><td>${rise}</td><td>${grade}</td><td>${fmtP(e.pace)}</td><td>${e.hr0}→${e.hr1}</td></tr>`;
+  }).join('');
+  $('evrows').onclick = (e) => {
+    const tr = e.target.closest('tr'); if (!tr) return;
+    const ev = EV[+tr.dataset.k];
+    showTab('replay'); state.t = Math.max(MAT, ev.t0 - 25); setFollow(true); render(true); setPlaying(true);
   };
 
   // ---------- tabs ----------
